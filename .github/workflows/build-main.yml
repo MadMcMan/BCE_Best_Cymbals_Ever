@@ -59,16 +59,10 @@ jobs:
         id: linux_targets
         shell: bash
         run: |
-          HELP="$(cmake --build "${BUILD_DIR}" --target help)"
-          TARGETS="MadMcManBCE-vst3 MadMcManBCE-clap"
-          if echo "${HELP}" | grep -q "MadMcManBCE-lv2"; then
-            TARGETS="${TARGETS} MadMcManBCE-lv2"
-          fi
-          if echo "${HELP}" | grep -q "MadMcManBCE-jack"; then
-            TARGETS="${TARGETS} MadMcManBCE-jack"
-          elif echo "${HELP}" | grep -q "MadMcManBCE"; then
-            TARGETS="${TARGETS} MadMcManBCE"
-          fi
+          # Explicit: `cmake --build --target help` is not reliable across
+          # generators/runners, and omitting the jack target drops the only
+          # standalone executable from the package.
+          TARGETS="MadMcManBCE-vst3 MadMcManBCE-clap MadMcManBCE-lv2 MadMcManBCE-jack"
           echo "targets=${TARGETS}" >> "$GITHUB_OUTPUT"
 
       - name: Build
@@ -143,16 +137,10 @@ jobs:
         id: mac_targets
         shell: bash
         run: |
-          HELP="$(cmake --build "${BUILD_DIR}" --target help)"
-          TARGETS="MadMcManBCE-vst3 MadMcManBCE-clap"
-          if echo "${HELP}" | grep -q "MadMcManBCE-lv2"; then
-            TARGETS="${TARGETS} MadMcManBCE-lv2"
-          fi
-          if echo "${HELP}" | grep -q "MadMcManBCE-jack"; then
-            TARGETS="${TARGETS} MadMcManBCE-jack"
-          elif echo "${HELP}" | grep -q "MadMcManBCE"; then
-            TARGETS="${TARGETS} MadMcManBCE"
-          fi
+          # Explicit: `cmake --build --target help` is not reliable across
+          # generators/runners, and omitting the jack target drops the only
+          # standalone executable from the package.
+          TARGETS="MadMcManBCE-vst3 MadMcManBCE-clap MadMcManBCE-lv2 MadMcManBCE-jack"
           echo "targets=${TARGETS}" >> "$GITHUB_OUTPUT"
 
       - name: Build
@@ -242,16 +230,10 @@ jobs:
         id: win_targets
         shell: msys2 {0}
         run: |
-          HELP="$(cmake --build "${BUILD_DIR}" --target help)"
-          TARGETS="MadMcManBCE-vst3 MadMcManBCE-clap"
-          if echo "${HELP}" | grep -q "MadMcManBCE-lv2"; then
-            TARGETS="${TARGETS} MadMcManBCE-lv2"
-          fi
-          if echo "${HELP}" | grep -q "MadMcManBCE-jack"; then
-            TARGETS="${TARGETS} MadMcManBCE-jack"
-          elif echo "${HELP}" | grep -q "MadMcManBCE"; then
-            TARGETS="${TARGETS} MadMcManBCE"
-          fi
+          # Explicit: `cmake --build --target help` is not reliable across
+          # generators/runners, and omitting the jack target drops the only
+          # standalone executable from the package.
+          TARGETS="MadMcManBCE-vst3 MadMcManBCE-clap MadMcManBCE-lv2 MadMcManBCE-jack"
           echo "targets=${TARGETS}" >> "$GITHUB_OUTPUT"
 
       - name: Build
