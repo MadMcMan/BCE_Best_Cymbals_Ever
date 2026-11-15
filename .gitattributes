@@ -1,0 +1,2 @@
+# Vendored third-party code keeps upstream formatting; don't fail diff checks on it.
+deps/vendored-fx/** -whitespace

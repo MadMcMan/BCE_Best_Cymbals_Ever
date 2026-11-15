@@ -1,0 +1,12 @@
+[submodule "deps/dpf-widgets"]
+	path = deps/dpf-widgets
+	url = https://github.com/DISTRHO/DPF-Widgets.git
+[submodule "deps/lvgl"]
+	path = deps/lvgl
+	url = https://github.com/lvgl/lvgl.git
+[submodule "deps/DPF"]
+	path = deps/DPF
+	url = https://github.com/DISTRHO/DPF.git
+[submodule "deps/airwindows"]
+	path = deps/airwindows
+	url = https://github.com/airwindows/airwindows.git

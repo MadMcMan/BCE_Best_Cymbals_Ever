@@ -1,0 +1,143 @@
+# Build directories
+build/
+bin/
+dist/
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+*.cmake
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+.directory
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+
+# Dependencies
+# NOTE: `deps/*`, not `deps/` — git never descends into an excluded directory,
+# so a `deps/` rule makes any `!deps/...` re-include below it a silent no-op.
+# Matching children individually is what lets the vendored trees be pulled back in.
+deps/*
+!deps/sst-effects/
+!deps/sst-effects/**
+!deps/sst-basic-blocks/
+!deps/sst-basic-blocks/**
+!deps/sst-filters/
+!deps/sst-filters/**
+!deps/sst-waveshapers/
+!deps/sst-waveshapers/**
+!deps/fmt/
+!deps/fmt/**
+# CMake includes headers and sources from this tree; it is a build input, not a
+# scratch checkout. Keep it tracked so a fresh clone can configure.
+!deps/vendored-fx/
+!deps/vendored-fx/**
+# (the cymbals-ui kit is re-included at the very bottom of this file — see the
+#  "Vendored cymbals-ui kit" block; gitignore's last match wins, so the
+#  negation has to come after broad rules like `skills/`.)
+# Project artifacts and logs
+logs/
+*.log
+step*_build.*
+build_output.*
+test_output.*
+*_test_*.exe
+tmp_*.*
+artifacts/debug/
+artifacts/review/
+.local/
+.plans/
+node_modules/
+proxy.js
+build-lvgl/
+# Any other scratch build dir (build-core, build-gauntlet, build-keybed, ...):
+# each of these was an ad-hoc configure dir, not a shipped artifact.
+build-*/
+package-lock.json
+package.json
+tokenizer/
+.venv/
+git_show_head.cpp
+build-mac/
+build-linux/
+build-windows/
+build-plugin/
+build-mac-mingwtest/
+build-linux-mingwtest/
+artifacts/
+.agents/
+orchestrator/
+plans/
+tools/
+# Keep script workspace clutter ignored by default; release/installer entry
+# points used by GitHub Actions stay tracked. Local packaging helpers are not.
+scripts/*
+!scripts/installer_win/
+!scripts/installer_win/cymbals64.iss
+!scripts/installer_linux/
+!scripts/installer_linux/make_deb.sh
+!scripts/installer_linux/make_rpm.sh
+!scripts/installer_mac/
+!scripts/installer_mac/make_installer.sh
+skills/
+instructions/
+# Internal project documentation, plans, and agent guides are kept outside the
+# public repository (root README is the exception).
+docs/
+AGENTS.md
+Conductor.agent.md
+PLUGIN_DEV_GUIDE.md
+code-review-subagent.agent.md
+implement-subagent.agent.md
+planning-subagent.agent.md
+instructions.md
+.github/agents/
+.github/PULL_REQUEST_TEMPLATE.md
+tests/
+plugins/Cymbals/src/cymbals-ui/tests/
+plugins/Cymbals/src/cymbals-ui/AGENTS.md
+plugins/Cymbals/src/cymbals-ui/CLAUDE.md
+plugins/Cymbals/src/cymbals-ui/README.md
+plugins/Cymbals/src/cymbals-ui/docs/
+# Python is not used by the build. Dev/test generators and capture scripts live
+# in the internal archive, not the public tree.
+*.py
+scripts/gen_airwindows.ps1
+
+# --- cymbals-ui kit MOVED: now project-owned at plugins/Cymbals/src/cymbals-ui ---
+# It used to live at deps/cymbals-ui, which needed the negations that were here
+# to pull it back out of the `deps/*
+!deps/sst-effects/
+!deps/sst-effects/**` rule above. It is no longer under deps/,
+# so those negations are gone: the kit is plain first-party source in the
+# plugin tree and needs no ignore gymnastics. `deps/*
+!deps/sst-effects/
+!deps/sst-effects/**` still excludes the
+# submodules' working trees (their gitlinks are tracked regardless).
+
+# Ad-hoc screenshot crops from UI triage (scratch, not documentation).
+*_crop.png
+
+# The Airwindows glue generator is kept in the local internal archive and is not
+# part of the public build; committed generated tables remain the build input.
+# (Its historical !-rules were removed so the local copy stays hidden.)

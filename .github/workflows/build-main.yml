@@ -1,0 +1,736 @@
+name: build
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    name: Linux (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [x86_64]
+    runs-on: ubuntu-22.04
+    env:
+      BUILD_DIR: build-linux
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Set up dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -yqq \
+            build-essential \
+            cmake \
+            ninja-build \
+            pkg-config \
+            libx11-dev \
+            libxext-dev \
+            libxrandr-dev \
+            libxcursor-dev \
+            libgl1-mesa-dev \
+            libasound2-dev \
+            libdbus-1-dev \
+            liblo-dev
+          sudo apt-get clean
+
+      - name: Configure
+        run: |
+          cmake -S . -B "${BUILD_DIR}" -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCONFIG_LV_BUILD_EXAMPLES=OFF \
+            -DCONFIG_LV_BUILD_DEMOS=OFF \
+            -DCONFIG_LV_USE_THORVG_INTERNAL=OFF
+
+      - name: Resolve targets
+        id: linux_targets
+        shell: bash
+        run: |
+          HELP="$(cmake --build "${BUILD_DIR}" --target help)"
+          TARGETS="MadMcManBCE-vst3 MadMcManBCE-clap"
+          if echo "${HELP}" | grep -q "MadMcManBCE-lv2"; then
+            TARGETS="${TARGETS} MadMcManBCE-lv2"
+          fi
+          if echo "${HELP}" | grep -q "MadMcManBCE-jack"; then
+            TARGETS="${TARGETS} MadMcManBCE-jack"
+          elif echo "${HELP}" | grep -q "MadMcManBCE"; then
+            TARGETS="${TARGETS} MadMcManBCE"
+          fi
+          echo "targets=${TARGETS}" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        run: |
+          cmake --build "${BUILD_DIR}" --config Release --target ${{ steps.linux_targets.outputs.targets }} --verbose
+
+      - name: Verify Linux VST3 architecture
+        shell: bash
+        run: |
+          BIN="${BUILD_DIR}/bin/MadMcManBCE.vst3/Contents/x86_64-linux/MadMcManBCE.so"
+          if [ ! -f "${BIN}" ]; then
+            echo "Expected VST3 binary not found: ${BIN}"
+            exit 1
+          fi
+          file "${BIN}"
+          if ! file "${BIN}" | grep -qiE 'ELF 64-bit.*x86-64'; then
+            echo "Linux VST3 is not x86_64. Bitwig may report unsupported architecture."
+            exit 1
+          fi
+
+      - name: Pack binaries
+        shell: bash
+        run: |
+          SHA8="${GITHUB_SHA::8}"
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            SHA8="${GITHUB_REF_NAME}"
+          fi
+          PKG="${{ github.event.repository.name }}-linux-${{ matrix.target }}-${{ github.event.pull_request.number || '0' }}-${SHA8}.tar.gz"
+          mkdir -p artifacts/linux
+          cp -f LICENSE artifacts/linux/ || true
+          cp -f README.md artifacts/linux/ || true
+          if [ -d "${BUILD_DIR}/bin/MadMcManBCE.vst3" ]; then cp -R "${BUILD_DIR}/bin/MadMcManBCE.vst3" artifacts/linux/; fi
+          if [ -f "${BUILD_DIR}/bin/MadMcManBCE.clap" ]; then cp -f "${BUILD_DIR}/bin/MadMcManBCE.clap" artifacts/linux/; fi
+          if [ -d "${BUILD_DIR}/bin/MadMcManBCE.lv2" ]; then cp -R "${BUILD_DIR}/bin/MadMcManBCE.lv2" artifacts/linux/; fi
+          if [ -f "${BUILD_DIR}/bin/MadMcManBCE" ]; then cp -f "${BUILD_DIR}/bin/MadMcManBCE" artifacts/linux/; fi
+          if [ -f "${BUILD_DIR}/bin/MadMcManBCE.exe" ]; then cp -f "${BUILD_DIR}/bin/MadMcManBCE.exe" artifacts/linux/; fi
+          tar -C artifacts/linux -czf "${PKG}" .
+          echo "pkg=${PKG}" >> "$GITHUB_OUTPUT"
+        id: linux_pack
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ github.event.repository.name }}-linux-${{ matrix.target }}
+          path: ${{ steps.linux_pack.outputs.pkg }}
+  macos:
+    name: macOS (universal)
+    runs-on: macos-14
+    env:
+      BUILD_DIR: build-mac
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Set up dependencies
+        run: |
+          brew update
+          brew install cmake ninja
+
+      - name: Configure
+        run: |
+          cmake -S . -B "${BUILD_DIR}" -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" \
+            -DCONFIG_LV_BUILD_EXAMPLES=OFF \
+            -DCONFIG_LV_BUILD_DEMOS=OFF \
+            -DCONFIG_LV_USE_THORVG_INTERNAL=OFF
+
+      - name: Resolve targets
+        id: mac_targets
+        shell: bash
+        run: |
+          HELP="$(cmake --build "${BUILD_DIR}" --target help)"
+          TARGETS="MadMcManBCE-vst3 MadMcManBCE-clap"
+          if echo "${HELP}" | grep -q "MadMcManBCE-lv2"; then
+            TARGETS="${TARGETS} MadMcManBCE-lv2"
+          fi
+          if echo "${HELP}" | grep -q "MadMcManBCE-jack"; then
+            TARGETS="${TARGETS} MadMcManBCE-jack"
+          elif echo "${HELP}" | grep -q "MadMcManBCE"; then
+            TARGETS="${TARGETS} MadMcManBCE"
+          fi
+          echo "targets=${TARGETS}" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        run: |
+          cmake --build "${BUILD_DIR}" --config Release --target ${{ steps.mac_targets.outputs.targets }} --verbose
+
+      - name: Verify macOS VST3 architecture
+        shell: bash
+        run: |
+          BIN="${BUILD_DIR}/bin/MadMcManBCE.vst3/Contents/MacOS/MadMcManBCE"
+          if [ ! -f "${BIN}" ]; then
+            echo "Expected VST3 binary not found: ${BIN}"
+            exit 1
+          fi
+          file "${BIN}"
+          lipo -info "${BIN}"
+          if ! lipo -info "${BIN}" | grep -q 'x86_64'; then
+            echo "macOS VST3 missing x86_64 slice. Intel Bitwig and Rosetta hosts will fail."
+            exit 1
+          fi
+          if ! lipo -info "${BIN}" | grep -q 'arm64'; then
+            echo "macOS VST3 missing arm64 slice. Apple Silicon native hosts will fail."
+            exit 1
+          fi
+
+      - name: Pack binaries
+        id: mac_pack
+        shell: bash
+        run: |
+          SHA8="${GITHUB_SHA::8}"
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            SHA8="${GITHUB_REF_NAME}"
+          fi
+          PKG="${{ github.event.repository.name }}-macos-universal-${{ github.event.pull_request.number || '0' }}-${SHA8}.tar.gz"
+          mkdir -p artifacts/macos
+          cp -f LICENSE artifacts/macos/ || true
+          cp -f README.md artifacts/macos/ || true
+          if [ -d "${BUILD_DIR}/bin/MadMcManBCE.vst3" ]; then cp -R "${BUILD_DIR}/bin/MadMcManBCE.vst3" artifacts/macos/; fi
+          if [ -f "${BUILD_DIR}/bin/MadMcManBCE.clap" ]; then cp -f "${BUILD_DIR}/bin/MadMcManBCE.clap" artifacts/macos/; fi
+          if [ -d "${BUILD_DIR}/bin/MadMcManBCE.lv2" ]; then cp -R "${BUILD_DIR}/bin/MadMcManBCE.lv2" artifacts/macos/; fi
+          if [ -f "${BUILD_DIR}/bin/MadMcManBCE" ]; then cp -f "${BUILD_DIR}/bin/MadMcManBCE" artifacts/macos/; fi
+          tar -C artifacts/macos -czf "${PKG}" .
+          echo "pkg=${PKG}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ github.event.repository.name }}-macos-universal
+          path: ${{ steps.mac_pack.outputs.pkg }}
+
+  windows:
+    name: Windows (win64)
+    runs-on: windows-latest
+    env:
+      BUILD_DIR: build-win
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Set up MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
+            mingw-w64-x86_64-make
+            mingw-w64-x86_64-pkgconf
+            zip
+
+      - name: Configure
+        shell: msys2 {0}
+        run: |
+          cmake -S . -B "${BUILD_DIR}" -G "MinGW Makefiles" \
+            -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
+            -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++ \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCONFIG_LV_BUILD_EXAMPLES=OFF \
+            -DCONFIG_LV_BUILD_DEMOS=OFF \
+            -DCONFIG_LV_USE_THORVG_INTERNAL=OFF
+
+      - name: Resolve targets
+        id: win_targets
+        shell: msys2 {0}
+        run: |
+          HELP="$(cmake --build "${BUILD_DIR}" --target help)"
+          TARGETS="MadMcManBCE-vst3 MadMcManBCE-clap"
+          if echo "${HELP}" | grep -q "MadMcManBCE-lv2"; then
+            TARGETS="${TARGETS} MadMcManBCE-lv2"
+          fi
+          if echo "${HELP}" | grep -q "MadMcManBCE-jack"; then
+            TARGETS="${TARGETS} MadMcManBCE-jack"
+          elif echo "${HELP}" | grep -q "MadMcManBCE"; then
+            TARGETS="${TARGETS} MadMcManBCE"
+          fi
+          echo "targets=${TARGETS}" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        shell: msys2 {0}
+        run: |
+          cmake --build "${BUILD_DIR}" --config Release --target ${{ steps.win_targets.outputs.targets }} --verbose
+
+      - name: Pack binaries
+        id: win_pack
+        shell: msys2 {0}
+        run: |
+          SHA8="${GITHUB_SHA:0:8}"
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            SHA8="${GITHUB_REF_NAME}"
+          fi
+          PRNUM="0"
+          if [[ -n "${{ github.event.pull_request.number }}" ]]; then
+            PRNUM="${{ github.event.pull_request.number }}"
+          fi
+          PKG="${{ github.event.repository.name }}-windows-win64-${PRNUM}-${SHA8}.zip"
+          mkdir -p artifacts/windows
+          cp -f LICENSE artifacts/windows/ || true
+          cp -f README.md artifacts/windows/ || true
+          if [ -d "${BUILD_DIR}/bin/MadMcManBCE.vst3" ]; then cp -R "${BUILD_DIR}/bin/MadMcManBCE.vst3" artifacts/windows/; fi
+          if [ -f "${BUILD_DIR}/bin/MadMcManBCE.clap" ]; then cp -f "${BUILD_DIR}/bin/MadMcManBCE.clap" artifacts/windows/; fi
+          if [ -d "${BUILD_DIR}/bin/MadMcManBCE.lv2" ]; then cp -R "${BUILD_DIR}/bin/MadMcManBCE.lv2" artifacts/windows/; fi
+          if [ -f "${BUILD_DIR}/bin/MadMcManBCE.exe" ]; then cp -f "${BUILD_DIR}/bin/MadMcManBCE.exe" artifacts/windows/; fi
+          if [ -f "${BUILD_DIR}/bin/MadMcManBCE-jack.exe" ]; then cp -f "${BUILD_DIR}/bin/MadMcManBCE-jack.exe" artifacts/windows/; fi
+          cd artifacts/windows
+          zip -r -9 "../../${PKG}" .
+          echo "pkg=${PKG}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ github.event.repository.name }}-windows-win64
+          path: ${{ steps.win_pack.outputs.pkg }}
+  plugin-validation:
+    name: Plugin validation (linux x86_64)
+    runs-on: ubuntu-22.04
+    needs:
+      - linux
+    steps:
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ github.event.repository.name }}-linux-x86_64
+          path: dist
+
+      - name: Extract package
+        shell: bash
+        run: |
+          set -euo pipefail
+          PKG="$(find dist -maxdepth 2 -type f -name '*.tar.gz' | head -n 1)"
+          if [ -z "${PKG}" ]; then
+            echo "No Linux package found in downloaded artifact"
+            exit 1
+          fi
+          mkdir -p unpack
+          tar -xzf "${PKG}" -C unpack
+          find unpack -maxdepth 4 -type f | sort
+
+      - name: Validate VST3 bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          BIN="unpack/MadMcManBCE.vst3/Contents/x86_64-linux/MadMcManBCE.so"
+          test -f "${BIN}" || { echo "Missing VST3 binary: ${BIN}"; exit 1; }
+          file "${BIN}"
+          if ! file "${BIN}" | grep -qiE 'ELF 64-bit.*x86-64'; then
+            echo "VST3 binary is not x86_64 ELF"
+            exit 1
+          fi
+          if ! nm -D "${BIN}" | grep -q 'GetPluginFactory'; then
+            echo "VST3 binary missing GetPluginFactory export"
+            exit 1
+          fi
+
+      - name: Validate CLAP bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          BIN="unpack/MadMcManBCE.clap"
+          test -f "${BIN}" || { echo "Missing CLAP binary: ${BIN}"; exit 1; }
+          file "${BIN}"
+          if ! file "${BIN}" | grep -qiE 'ELF 64-bit.*x86-64'; then
+            echo "CLAP binary is not x86_64 ELF"
+            exit 1
+          fi
+          if ! nm -D "${BIN}" | grep -q 'clap_entry'; then
+            echo "CLAP binary missing clap_entry export"
+            exit 1
+          fi
+
+      - name: Validate LV2 metadata (if present)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -d "unpack/MadMcManBCE.lv2" ]; then
+            test -f "unpack/MadMcManBCE.lv2/manifest.ttl" || { echo "LV2 manifest.ttl missing"; exit 1; }
+            SO_COUNT="$(find "unpack/MadMcManBCE.lv2" -maxdepth 1 -type f -name '*.so' | wc -l)"
+            if [ "${SO_COUNT}" -lt 1 ]; then
+              echo "LV2 bundle has no shared library (.so)"
+              exit 1
+            fi
+          fi
+
+      - name: Validate standalone (if present)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f "unpack/MadMcManBCE" ]; then
+            file "unpack/MadMcManBCE"
+            if ! file "unpack/MadMcManBCE" | grep -qiE 'ELF 64-bit.*x86-64'; then
+              echo "Standalone binary is not x86_64 ELF"
+              exit 1
+            fi
+          fi
+
+  quality-baseline:
+    name: Quality baseline gate (phase1)
+    runs-on: ubuntu-22.04
+    env:
+      BUILD_DIR: build-quality
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Set up dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -yqq \
+            build-essential \
+            cmake \
+            ninja-build \
+            pkg-config \
+            libx11-dev \
+            libxext-dev \
+            libxrandr-dev \
+            libxcursor-dev \
+            libgl1-mesa-dev \
+            libasound2-dev \
+            libdbus-1-dev \
+            liblo-dev
+          sudo apt-get clean
+
+      - name: Configure
+        run: |
+          cmake -S . -B "${BUILD_DIR}" -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCONFIG_LV_BUILD_EXAMPLES=OFF \
+            -DCONFIG_LV_BUILD_DEMOS=OFF \
+            -DCONFIG_LV_USE_THORVG_INTERNAL=OFF
+
+      - name: Upload Phase 1 baseline audit
+        uses: actions/upload-artifact@v7
+        with:
+          name: phase1-baseline-audit
+          path: artifacts/analysis/phase1_audit_baseline.md
+
+  release:
+    name: Release (${{ matrix.name }})
+    if: startsWith(github.ref, 'refs/tags/v')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: publish-and-deb
+            os: ubuntu-22.04
+          - name: windows-installer
+            os: windows-latest
+    runs-on: ${{ matrix.os }}
+    needs:
+      - linux
+      - macos
+      - windows
+      - plugin-validation
+      - quality-baseline
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Download Linux artifact
+        if: runner.os == 'Linux'
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ github.event.repository.name }}-linux-x86_64
+          path: dist/linux
+
+      - name: Download macOS artifact
+        if: runner.os == 'Linux'
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ github.event.repository.name }}-macos-universal
+          path: dist/macos
+
+      - name: Download Windows artifact
+        if: runner.os == 'Linux' || runner.os == 'Windows'
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ github.event.repository.name }}-windows-win64
+          path: dist/windows
+
+      - name: Extract Linux raw artifact for deb packaging
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          PKG="$(find dist/linux -type f -name '*.tar.gz' | head -n 1)"
+          if [ -z "${PKG}" ]; then
+            echo "No Linux artifact found for deb packaging"
+            exit 1
+          fi
+          rm -rf release-linux-bin
+          mkdir -p release-linux-bin
+          tar -xzf "${PKG}" -C release-linux-bin
+
+      - name: Build Linux deb installer
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -yqq dpkg
+          BUILDDIR="${GITHUB_WORKSPACE}/release-linux-bin" bash scripts/installer_linux/make_deb.sh
+
+      - name: Upload Linux deb artifact
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ github.event.repository.name }}-linux-deb
+          path: "*.deb"
+          if-no-files-found: error
+
+      - name: Install Inno Setup
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+
+      - name: Extract Windows raw artifact for installer packaging
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $pkg = Get-ChildItem -Path dist/windows -Recurse -Filter *.zip | Select-Object -First 1
+          if (-not $pkg) {
+            throw 'No Windows artifact found for installer packaging'
+          }
+          if (Test-Path release-win-bin) {
+            Remove-Item release-win-bin -Recurse -Force
+          }
+          Expand-Archive -Path $pkg.FullName -DestinationPath release-win-bin -Force
+
+      - name: Build Windows installer (Inno Setup)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $buildDir = (Resolve-Path release-win-bin).Path
+          iscc /Q "/DBuildDir=$buildDir" scripts/installer_win/cymbals64.iss
+
+      - name: Upload Windows installer artifact
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ github.event.repository.name }}-windows-installer
+          path: scripts/installer_win/Output/*.exe
+          if-no-files-found: error
+
+  nightly-release:
+    name: Nightly release (${{ matrix.name }})
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: publish-and-deb
+            os: ubuntu-22.04
+          - name: windows-installer
+            os: windows-latest
+    runs-on: ${{ matrix.os }}
+    needs:
+      - linux
+      - macos
+      - windows
+      - plugin-validation
+      - quality-baseline
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Download Linux artifact
+        if: runner.os == 'Linux'
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ github.event.repository.name }}-linux-x86_64
+          path: dist/linux
+
+      - name: Download macOS artifact
+        if: runner.os == 'Linux'
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ github.event.repository.name }}-macos-universal
+          path: dist/macos
+
+      - name: Download Windows artifact
+        if: runner.os == 'Linux' || runner.os == 'Windows'
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ github.event.repository.name }}-windows-win64
+          path: dist/windows
+
+      - name: Extract Linux raw artifact for deb packaging
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          PKG="$(find dist/linux -type f -name '*.tar.gz' | head -n 1)"
+          if [ -z "${PKG}" ]; then
+            echo "No Linux artifact found for deb packaging"
+            exit 1
+          fi
+          rm -rf release-linux-bin
+          mkdir -p release-linux-bin
+          tar -xzf "${PKG}" -C release-linux-bin
+
+      - name: Build Linux deb installer
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -yqq dpkg
+          BUILDDIR="${GITHUB_WORKSPACE}/release-linux-bin" bash scripts/installer_linux/make_deb.sh
+
+      - name: Upload Linux deb artifact
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ github.event.repository.name }}-linux-deb
+          path: "*.deb"
+          if-no-files-found: error
+
+      - name: Install Inno Setup
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+
+      - name: Extract Windows raw artifact for installer packaging
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $pkg = Get-ChildItem -Path dist/windows -Recurse -Filter *.zip | Select-Object -First 1
+          if (-not $pkg) {
+            throw 'No Windows artifact found for installer packaging'
+          }
+          if (Test-Path release-win-bin) {
+            Remove-Item release-win-bin -Recurse -Force
+          }
+          Expand-Archive -Path $pkg.FullName -DestinationPath release-win-bin -Force
+
+      - name: Build Windows installer (Inno Setup)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $buildDir = (Resolve-Path release-win-bin).Path
+          iscc /Q "/DBuildDir=$buildDir" scripts/installer_win/cymbals64.iss
+
+      - name: Upload Windows installer artifact
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ github.event.repository.name }}-windows-installer
+          path: scripts/installer_win/Output/*.exe
+          if-no-files-found: error
+
+  release-publish:
+    name: Release publish (atomic)
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-22.04
+    needs:
+      - release
+    steps:
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ github.event.repository.name }}-linux-x86_64
+          path: dist/linux
+
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ github.event.repository.name }}-macos-universal
+          path: dist/macos
+
+      - name: Download Windows raw artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ github.event.repository.name }}-windows-win64
+          path: dist/windows
+
+      - name: Download Linux deb artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ github.event.repository.name }}-linux-deb
+          path: dist/linux-deb
+
+      - name: Download Windows installer artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ github.event.repository.name }}-windows-installer
+          path: scripts/installer_win/Output
+
+      - name: Publish release assets
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          files: |
+            dist/**
+            dist/linux-deb/*.deb
+            scripts/installer_win/Output/*.exe
+
+  nightly-publish:
+    name: Nightly publish (atomic)
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-22.04
+    needs:
+      - nightly-release
+    steps:
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ github.event.repository.name }}-linux-x86_64
+          path: dist/linux
+
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ github.event.repository.name }}-macos-universal
+          path: dist/macos
+
+      - name: Download Windows raw artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ github.event.repository.name }}-windows-win64
+          path: dist/windows
+
+      - name: Download Linux deb artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ github.event.repository.name }}-linux-deb
+          path: dist/linux-deb
+
+      - name: Download Windows installer artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ github.event.repository.name }}-windows-installer
+          path: scripts/installer_win/Output
+
+      - name: Publish Nightly release assets
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: Nightly
+          name: Nightly
+          target_commitish: ${{ github.sha }}
+          draft: false
+          prerelease: true
+          generate_release_notes: true
+          make_latest: false
+          files: |
+            dist/**
+            dist/linux-deb/*.deb
+            scripts/installer_win/Output/*.exe
