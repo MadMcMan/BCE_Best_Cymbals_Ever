@@ -6,8 +6,8 @@
 // that will be static to this translation unit
 #define createEffectInstance createEffectInstance_local_KWoodRoom
 
-#include "../../../../../deps/airwindows/plugins/WinVST/KWoodRoom/KWoodRoom.cpp"
-#include "../../../../../deps/airwindows/plugins/WinVST/KWoodRoom/KWoodRoomProc.cpp"
+#include "../../../../../deps/airwindows/plugins/WinVST/kWoodRoom/kWoodRoom.cpp"
+#include "../../../../../deps/airwindows/plugins/WinVST/kWoodRoom/kWoodRoomProc.cpp"
 
 // Undefine to avoid issues elsewhere
 #undef createEffectInstance

@@ -6,8 +6,8 @@
 // that will be static to this translation unit
 #define createEffectInstance createEffectInstance_local_KCyberCity
 
-#include "../../../../../deps/airwindows/plugins/WinVST/KCyberCity/KCyberCity.cpp"
-#include "../../../../../deps/airwindows/plugins/WinVST/KCyberCity/KCyberCityProc.cpp"
+#include "../../../../../deps/airwindows/plugins/WinVST/kCyberCity/kCyberCity.cpp"
+#include "../../../../../deps/airwindows/plugins/WinVST/kCyberCity/kCyberCityProc.cpp"
 
 // Undefine to avoid issues elsewhere
 #undef createEffectInstance

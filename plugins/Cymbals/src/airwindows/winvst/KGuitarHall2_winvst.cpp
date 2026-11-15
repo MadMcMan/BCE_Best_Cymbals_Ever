@@ -6,8 +6,8 @@
 // that will be static to this translation unit
 #define createEffectInstance createEffectInstance_local_KGuitarHall2
 
-#include "../../../../../deps/airwindows/plugins/WinVST/KGuitarHall2/KGuitarHall2.cpp"
-#include "../../../../../deps/airwindows/plugins/WinVST/KGuitarHall2/KGuitarHall2Proc.cpp"
+#include "../../../../../deps/airwindows/plugins/WinVST/kGuitarHall2/kGuitarHall2.cpp"
+#include "../../../../../deps/airwindows/plugins/WinVST/kGuitarHall2/kGuitarHall2Proc.cpp"
 
 // Undefine to avoid issues elsewhere
 #undef createEffectInstance

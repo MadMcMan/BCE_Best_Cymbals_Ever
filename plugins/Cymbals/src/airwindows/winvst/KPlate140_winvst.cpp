@@ -6,8 +6,8 @@
 // that will be static to this translation unit
 #define createEffectInstance createEffectInstance_local_KPlate140
 
-#include "../../../../../deps/airwindows/plugins/WinVST/KPlate140/KPlate140.cpp"
-#include "../../../../../deps/airwindows/plugins/WinVST/KPlate140/KPlate140Proc.cpp"
+#include "../../../../../deps/airwindows/plugins/WinVST/kPlate140/kPlate140.cpp"
+#include "../../../../../deps/airwindows/plugins/WinVST/kPlate140/kPlate140Proc.cpp"
 
 // Undefine to avoid issues elsewhere
 #undef createEffectInstance

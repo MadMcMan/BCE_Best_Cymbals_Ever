@@ -6,8 +6,8 @@
 // that will be static to this translation unit
 #define createEffectInstance createEffectInstance_local_KStation
 
-#include "../../../../../deps/airwindows/plugins/WinVST/KStation/KStation.cpp"
-#include "../../../../../deps/airwindows/plugins/WinVST/KStation/KStationProc.cpp"
+#include "../../../../../deps/airwindows/plugins/WinVST/kStation/kStation.cpp"
+#include "../../../../../deps/airwindows/plugins/WinVST/kStation/kStationProc.cpp"
 
 // Undefine to avoid issues elsewhere
 #undef createEffectInstance

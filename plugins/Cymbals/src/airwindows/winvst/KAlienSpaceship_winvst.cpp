@@ -6,8 +6,8 @@
 // that will be static to this translation unit
 #define createEffectInstance createEffectInstance_local_KAlienSpaceship
 
-#include "../../../../../deps/airwindows/plugins/WinVST/KAlienSpaceship/KAlienSpaceship.cpp"
-#include "../../../../../deps/airwindows/plugins/WinVST/KAlienSpaceship/KAlienSpaceshipProc.cpp"
+#include "../../../../../deps/airwindows/plugins/WinVST/kAlienSpaceship/kAlienSpaceship.cpp"
+#include "../../../../../deps/airwindows/plugins/WinVST/kAlienSpaceship/kAlienSpaceshipProc.cpp"
 
 // Undefine to avoid issues elsewhere
 #undef createEffectInstance

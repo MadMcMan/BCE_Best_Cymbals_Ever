@@ -6,8 +6,8 @@
 // that will be static to this translation unit
 #define createEffectInstance createEffectInstance_local_KCathedral3
 
-#include "../../../../../deps/airwindows/plugins/WinVST/KCathedral3/KCathedral3.cpp"
-#include "../../../../../deps/airwindows/plugins/WinVST/KCathedral3/KCathedral3Proc.cpp"
+#include "../../../../../deps/airwindows/plugins/WinVST/kCathedral3/kCathedral3.cpp"
+#include "../../../../../deps/airwindows/plugins/WinVST/kCathedral3/kCathedral3Proc.cpp"
 
 // Undefine to avoid issues elsewhere
 #undef createEffectInstance

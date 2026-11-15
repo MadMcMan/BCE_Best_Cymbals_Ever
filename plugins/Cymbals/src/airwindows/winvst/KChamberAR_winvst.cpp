@@ -6,8 +6,8 @@
 // that will be static to this translation unit
 #define createEffectInstance createEffectInstance_local_KChamberAR
 
-#include "../../../../../deps/airwindows/plugins/WinVST/KChamberAR/KChamberAR.cpp"
-#include "../../../../../deps/airwindows/plugins/WinVST/KChamberAR/KChamberARProc.cpp"
+#include "../../../../../deps/airwindows/plugins/WinVST/kChamberAR/kChamberAR.cpp"
+#include "../../../../../deps/airwindows/plugins/WinVST/kChamberAR/kChamberARProc.cpp"
 
 // Undefine to avoid issues elsewhere
 #undef createEffectInstance

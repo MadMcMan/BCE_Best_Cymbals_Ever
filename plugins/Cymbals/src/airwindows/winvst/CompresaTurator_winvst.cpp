@@ -6,8 +6,8 @@
 // that will be static to this translation unit
 #define createEffectInstance createEffectInstance_local_CompresaTurator
 
-#include "../../../../../deps/airwindows/plugins/WinVST/CompresaTurator/CompresaTurator.cpp"
-#include "../../../../../deps/airwindows/plugins/WinVST/CompresaTurator/CompresaTuratorProc.cpp"
+#include "../../../../../deps/airwindows/plugins/WinVST/Compresaturator/Compresaturator.cpp"
+#include "../../../../../deps/airwindows/plugins/WinVST/Compresaturator/CompresaturatorProc.cpp"
 
 // Undefine to avoid issues elsewhere
 #undef createEffectInstance

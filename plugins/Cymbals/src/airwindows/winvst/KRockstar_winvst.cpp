@@ -6,8 +6,8 @@
 // that will be static to this translation unit
 #define createEffectInstance createEffectInstance_local_KRockstar
 
-#include "../../../../../deps/airwindows/plugins/WinVST/KRockstar/KRockstar.cpp"
-#include "../../../../../deps/airwindows/plugins/WinVST/KRockstar/KRockstarProc.cpp"
+#include "../../../../../deps/airwindows/plugins/WinVST/kRockstar/kRockstar.cpp"
+#include "../../../../../deps/airwindows/plugins/WinVST/kRockstar/kRockstarProc.cpp"
 
 // Undefine to avoid issues elsewhere
 #undef createEffectInstance

@@ -1149,8 +1149,6 @@ private:
     std::atomic<bool> fPendingDspReset{false};
 
     // ===== Modulation System =====
-    struct IrExportInputSnapshot;   // forward decls (defined below in this class)
-    struct IrExportRenderState;
     ModulationEngine m_modEngine;
     float m_modOn = 1.0f;
     float m_paramBase[kParameterCount] = {};  // base (unmodulated) values, written in setParameterValue

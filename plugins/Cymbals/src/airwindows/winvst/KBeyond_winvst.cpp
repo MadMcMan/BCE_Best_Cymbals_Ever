@@ -6,8 +6,8 @@
 // that will be static to this translation unit
 #define createEffectInstance createEffectInstance_local_KBeyond
 
-#include "../../../../../deps/airwindows/plugins/WinVST/KBeyond/KBeyond.cpp"
-#include "../../../../../deps/airwindows/plugins/WinVST/KBeyond/KBeyondProc.cpp"
+#include "../../../../../deps/airwindows/plugins/WinVST/kBeyond/kBeyond.cpp"
+#include "../../../../../deps/airwindows/plugins/WinVST/kBeyond/kBeyondProc.cpp"
 
 // Undefine to avoid issues elsewhere
 #undef createEffectInstance
