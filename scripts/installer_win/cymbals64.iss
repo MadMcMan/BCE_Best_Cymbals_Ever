@@ -71,9 +71,10 @@ Name: "Standalone"; Description: "Standalone Application"; Types: full custom
 ; Installation directories per component
 ; ------------------------------------------------------------------
 [Dirs]
-Name: "{commonpf64}\Steinberg\VST3";              Components: VST3
-Name: "{commonpf64}\Common Files\CLAP";           Components: CLAP
-Name: "{commonpf64}\MadMcMan\MadMcManBCE";        Components: Standalone
+; Windows default discovery paths: C:\Program Files\Common Files\VST3 and CLAP.
+Name: "{autocf64}\VST3";                        Components: VST3
+Name: "{autocf64}\CLAP";                        Components: CLAP
+Name: "{autopf64}\MadMcMan\MadMcManBCE";         Components: Standalone
 
 ; ------------------------------------------------------------------
 ; Files
@@ -81,28 +82,21 @@ Name: "{commonpf64}\MadMcMan\MadMcManBCE";        Components: Standalone
 [Files]
 ; VST3 bundle directory (recursive)
 Source: "{#BuildDir}\{#AppExeName}.vst3\*"; \
-  DestDir: "{commonpf64}\Steinberg\VST3\{#AppExeName}.vst3"; \
+  DestDir: "{autocf64}\VST3\{#AppExeName}.vst3"; \
   Flags: ignoreversion recursesubdirs createallsubdirs; \
   Components: VST3
 
 ; CLAP single file
 Source: "{#BuildDir}\{#AppExeName}.clap"; \
-  DestDir: "{commonpf64}\Common Files\CLAP"; \
+  DestDir: "{autocf64}\CLAP"; \
   Flags: ignoreversion; \
   Components: CLAP
 
-; Standalone executable
+; Standalone/JACK executable (DPF builds the JACK target as MadMcManBCE.exe).
 Source: "{#BuildDir}\{#AppExeName}.exe"; \
-  DestDir: "{commonpf64}\MadMcMan\MadMcManBCE"; \
+  DestDir: "{autopf64}\MadMcMan\MadMcManBCE"; \
   DestName: "{#AppExeName}.exe"; \
-  Flags: ignoreversion skipifsourcedoesntexist; \
-  Components: Standalone
-
-; JACK standalone (alternative executable name)
-Source: "{#BuildDir}\{#AppExeName}-jack.exe"; \
-  DestDir: "{commonpf64}\MadMcMan\MadMcManBCE"; \
-  DestName: "{#AppExeName}-jack.exe"; \
-  Flags: ignoreversion skipifsourcedoesntexist; \
+  Flags: ignoreversion; \
   Components: Standalone
 
 ; ------------------------------------------------------------------
@@ -110,7 +104,8 @@ Source: "{#BuildDir}\{#AppExeName}-jack.exe"; \
 ; ------------------------------------------------------------------
 [Icons]
 Name: "{group}\{#AppName} Standalone"; \
-  Filename: "{commonpf64}\MadMcMan\MadMcManBCE\{#AppExeName}.exe"; \
+  Filename: "{autopf64}\MadMcMan\MadMcManBCE\{#AppExeName}.exe"; \
+  Flags: createonlyiffileexists; \
   Components: Standalone
 Name: "{group}\Uninstall {#AppName}"; \
   Filename: "{uninstallexe}"
@@ -119,7 +114,7 @@ Name: "{group}\Uninstall {#AppName}"; \
 ; Run after install
 ; ------------------------------------------------------------------
 [Run]
-Filename: "{commonpf64}\MadMcMan\MadMcManBCE\{#AppExeName}.exe"; \
+Filename: "{autopf64}\MadMcMan\MadMcManBCE\{#AppExeName}.exe"; \
   Description: "Launch {#AppName} Standalone"; \
-  Flags: nowait postinstall skipifsilent; \
+  Flags: nowait postinstall skipifsilent skipifdoesntexist; \
   Components: Standalone

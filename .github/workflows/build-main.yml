@@ -278,8 +278,13 @@ jobs:
           if [ -d "${BUILD_DIR}/bin/MadMcManBCE.vst3" ]; then cp -R "${BUILD_DIR}/bin/MadMcManBCE.vst3" artifacts/windows/; fi
           if [ -f "${BUILD_DIR}/bin/MadMcManBCE.clap" ]; then cp -f "${BUILD_DIR}/bin/MadMcManBCE.clap" artifacts/windows/; fi
           if [ -d "${BUILD_DIR}/bin/MadMcManBCE.lv2" ]; then cp -R "${BUILD_DIR}/bin/MadMcManBCE.lv2" artifacts/windows/; fi
+          # DPF's JACK target is an executable whose OUTPUT_NAME is MadMcManBCE,
+          # so it is bin/MadMcManBCE.exe (not -jack.exe).
           if [ -f "${BUILD_DIR}/bin/MadMcManBCE.exe" ]; then cp -f "${BUILD_DIR}/bin/MadMcManBCE.exe" artifacts/windows/; fi
-          if [ -f "${BUILD_DIR}/bin/MadMcManBCE-jack.exe" ]; then cp -f "${BUILD_DIR}/bin/MadMcManBCE-jack.exe" artifacts/windows/; fi
+          if [ ! -f artifacts/windows/MadMcManBCE.exe ]; then
+            echo "Windows package is missing MadMcManBCE.exe; installer would fail to launch the standalone"
+            exit 1
+          fi
           cd artifacts/windows
           zip -r -9 "../../${PKG}" .
           echo "pkg=${PKG}" >> "$GITHUB_OUTPUT"
@@ -514,7 +519,8 @@ jobs:
         shell: pwsh
         run: |
           $buildDir = (Resolve-Path release-win-bin).Path
-          iscc /Q "/DBuildDir=$buildDir" scripts/installer_win/cymbals64.iss
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          iscc /Q "/DBuildDir=$buildDir" "/DMyAppVersion=$version" scripts/installer_win/cymbals64.iss
 
       - name: Upload Windows installer artifact
         if: runner.os == 'Windows'
@@ -624,7 +630,8 @@ jobs:
         shell: pwsh
         run: |
           $buildDir = (Resolve-Path release-win-bin).Path
-          iscc /Q "/DBuildDir=$buildDir" scripts/installer_win/cymbals64.iss
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          iscc /Q "/DBuildDir=$buildDir" "/DMyAppVersion=$version" scripts/installer_win/cymbals64.iss
 
       - name: Upload Windows installer artifact
         if: runner.os == 'Windows'
