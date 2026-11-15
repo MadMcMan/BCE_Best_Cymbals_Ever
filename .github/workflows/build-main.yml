@@ -116,7 +116,7 @@ jobs:
           path: ${{ steps.linux_pack.outputs.pkg }}
   macos:
     name: macOS (universal)
-    runs-on: macos-14
+    runs-on: macos-latest
     env:
       BUILD_DIR: build-mac
     steps:
