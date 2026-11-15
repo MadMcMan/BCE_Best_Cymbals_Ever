@@ -645,7 +645,7 @@ static inline float triSigmoid(float x, float beta) {
     return x / std::sqrt(x * x + beta);
 }
 static inline float triLpLin(float tx, float z, float b, float a) { return a * (b * tx + z); }
-static inline float triHpLin(float xmz, float a) { return a * xmz; }
+[[maybe_unused]] static inline float triHpLin(float xmz, float a) { return a * xmz; }
 static inline float triSech2(float t) { return 1.0f - t * t; }
 static inline float triLpStep(float tx, float z, float est, float b, float a, float beta) {
     est = triLpLin(tx, z, b, a);

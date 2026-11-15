@@ -1927,7 +1927,7 @@ void PluginCymbals::run(const float** inputs, float** outputs, uint32_t frames,
         ~DenormalGuard() = default;
 #endif
     };
-    const DenormalGuard _denorm_guard;
+    [[maybe_unused]] const DenormalGuard _denorm_guard;
 
     if (fPendingPresetReady.load(std::memory_order_acquire)) {
         // Floats only here: the preset JSON was serialized on the staging side
