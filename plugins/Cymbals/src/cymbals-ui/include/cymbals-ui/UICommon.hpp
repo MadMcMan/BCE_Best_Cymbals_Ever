@@ -102,21 +102,19 @@ public:
 };
 
 // ============================================================================
-// "Azure studio" palette, after Arturia Pigments. Two evidence sources,
-// reconciled: (a) live captures refs/pigments_main.png (1280x720), and
-// (b) cross-checked press-shot extractions in artifacts/gauntlet/
-// pigments-research.md — panel #2C2C2E, recessed #1E1E20, chrome/dividers
-// #505050, engine-cyan mean #1A7491 with bright arc #17AFDD (hue ~197°).
-// Where the two diverged, the research values won. Modules read as flat
-// plates separated by near-black seams; the accent (COL_HIGHLIGHT) is
-// reserved for active states, values and indicators only — never chrome.
+// "Azure studio" palette. Values were reconciled from live 1280x720 captures
+// and cross-checked press-shot extractions: panel #2C2C2E, recessed #1E1E20,
+// chrome/dividers #505050, engine-cyan mean #1A7491 with bright arc #17AFDD
+// (hue ~197°). Modules read as flat plates separated by near-black seams; the
+// accent (COL_HIGHLIGHT) is reserved for active states, values and indicators
+// only — never chrome.
 // ============================================================================
 #define COL_BG         lv_color_hex(0x0A0B0C)  // chassis: window gaps (#070707, lifted to kill banding)
 #define COL_PANEL      lv_color_hex(0x2C2C2E)  // module plate (research #2C2C2E)
 #define COL_ACCENT     lv_color_hex(0x505050)  // neutral chrome: dividers/outlines (research #505050)
 #define COL_HIGHLIGHT  lv_color_hex(0x17AFDD)  // azure accent (research bright arc #17AFDD, hue 197)
-#define COL_TEXT       lv_color_hex(0xE8EAED)  // bright text (Pigments #EEEEF4)
-#define COL_TEXT_DIM   lv_color_hex(0x9DA0A6)  // dim gray labels (Pigments #A6A6AB)
+#define COL_TEXT       lv_color_hex(0xE8EAED)  // bright text (sampled #EEEEF4)
+#define COL_TEXT_DIM   lv_color_hex(0x9DA0A6)  // dim gray labels (sampled #A6A6AB)
 
 #define COL_TITLE      lv_color_hex(0xF2F3F5)  // section titles: bright near-white caps
 #define COL_HAIRLINE   lv_color_hex(0x1A1B1D)  // plate seam: darker than plate (gap look)
@@ -132,7 +130,7 @@ public:
 #define COL_CHART_BG   COL_PANEL
 
 #define COL_KNOB_RING_BG    lv_color_hex(0x212326)
-#define COL_KNOB_CAP        lv_color_hex(0x43464B)  // Pigments dark knob cap (#505050, tempered)
+#define COL_KNOB_CAP        lv_color_hex(0x43464B)  // dark knob cap (#505050, tempered)
 #define COL_KNOB_INDICATOR  COL_HIGHLIGHT
 // Hover/press lifts for the knob ring + cap. Derived from the same azure and
 // steel tokens rather than new hues, so the feedback reads as the knob waking
@@ -142,8 +140,8 @@ public:
 #define COL_KNOB_INDICATOR_PRESS lv_color_hex(0x6FD6F5)  // azure lit on press
 
 // ----------------------------------------------------------------------------
-// Machined metal cap material (AvonSynth VCO influence: black panel, silver
-// knurled caps). Dark values read as metal in ~5bit RGB565 space, so every
+// Machined metal cap material (black panel, silver knurled caps). Dark values
+// read as metal in ~5bit RGB565 space, so every
 // colour is deliberately > 0x20 with the lit side warm and the shadow side
 // cool — the cap must read as a lit solid on the BLACK panel, not a sore thumb.
 // Used by createSharedArcKnob's layoutKnobCapMaterial() (single definition, all
@@ -155,16 +153,15 @@ public:
 #define COL_KNOB_STEEL_DEEP  lv_color_hex(0x3E4247)  // deep-shadow edge (shadow side)
 
 // EQ band coding (kept; distinctive per-band colors are standard)
-#define COL_EQ_LOW     lv_color_hex(0xEE7648)  // Pigments ENV AMP orange
-#define COL_EQ_MID     lv_color_hex(0xECC346)  // Pigments LFO gold
-#define COL_EQ_HIGH    lv_color_hex(0x3DAE49)  // Pigments FUNCTIONS green
+#define COL_EQ_LOW     lv_color_hex(0xEE7648)  // ENV AMP orange
+#define COL_EQ_MID     lv_color_hex(0xECC346)  // LFO gold
+#define COL_EQ_HIGH    lv_color_hex(0x3DAE49)  // FUNCTIONS green
 #define COL_EQ_TOTAL   lv_color_hex(0xFFFFFF)
 
-// Functional lane coding (Pigments color-codes by function): envelope-section
-// arcs take the ENV orange, time/rate arcs the yellow-olive lane. Everything
-// else stays engine-cyan.
-#define COL_ENV        lv_color_hex(0xFA7529)  // envelope arcs (Pigments ENV lane, saturated)
-#define COL_TIME       lv_color_hex(0x908226)  // time/rate arcs (Pigments yellow-olive lane)
+// Functional lane coding: envelope-section arcs take the ENV orange, time/rate
+// arcs the yellow-olive lane. Everything else stays engine-cyan.
+#define COL_ENV        lv_color_hex(0xFA7529)  // envelope arcs (ENV lane, saturated)
+#define COL_TIME       lv_color_hex(0x908226)  // time/rate arcs (yellow-olive lane)
 
 // Generic UI colors
 #define COL_ERROR      lv_color_hex(0xE8574F)
@@ -192,7 +189,7 @@ public:
 #define COL_BTN_SKIP     COL_SKIP
 
 // Keyboard colors
-#define COL_KEYBOARD_BTN          lv_color_hex(0xDDE2E7)  // Serum 2 keys #B0C3D2, brightened
+#define COL_KEYBOARD_BTN          lv_color_hex(0xDDE2E7)  // key face #B0C3D2, brightened
 #define COL_KEYBOARD_BTN_PRESSED  lv_color_hex(0xB9C2CC)
 #define COL_KEYBOARD_BORDER       lv_color_hex(0x14161A)
 #define COL_KEYBOARD_TEXT         lv_color_hex(0x1A1D21)
@@ -234,7 +231,7 @@ public:
 #define COL_SRC_10     lv_color_hex(0xB0896A)   // brown
 #define COL_SRC_11     lv_color_hex(0x9AA3AE)   // gray
 
-// EQ editor colors (teal display canvas, after Pigments' #283840 screens)
+// EQ editor colors (teal display canvas, matching the #283840 screens)
 #define COL_EQ_CANVAS_BG     lv_color_hex(0x253037)  // display inset: desaturated teal-charcoal
 #define COL_EQ_FREQ_LABEL    lv_color_hex(0xA7B3BC)
 #define COL_EQ_DB_LABEL      lv_color_hex(0x9DAAB4)
@@ -270,7 +267,7 @@ inline const lv_font_t* getScaledFont() {
 inline const lv_font_t* getScaledSmallFont() {
     if (gUIScale >= 1.5f) return &lv_font_montserrat_16;
     if (gUIScale >= 1.2f) return &lv_font_montserrat_14;
-    return &lv_font_montserrat_12;  // Pigments-carried small labels/values
+    return &lv_font_montserrat_12;  // compact small labels/values
 }
 // One step below getScaledSmallFont, for knob titles in NARROW cells. The FX
 // card packs up to 8 arcs (7 algorithm params + WET) into ~395px, which is ~44px

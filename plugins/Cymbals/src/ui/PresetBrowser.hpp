@@ -1,4 +1,4 @@
-// Preset browser panel: u-he REPRO-style directory browser with search,
+// Preset browser panel: directory browser with search,
 // multi-coloured favourites, tag picker, and drag'n'drop folder copy.
 // Header-only LVGL UI; hosts implement PresetBrowserHost (CymbalsUI does).
 // Pure search/favourites/copy logic lives in PresetBrowserLogic.hpp.

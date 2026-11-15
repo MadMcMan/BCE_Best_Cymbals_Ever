@@ -582,7 +582,7 @@ struct Stage1Tab {
                 uiPackKnob(arc, spec.arcSize, scaled(0), spec.arcSize + scaled(4));
             packRailCol(param);
         };
-        // Lane hue colour-coding (Pigments-style: ENV orange / time olive arcs)
+        // Lane hue colour-coding (ENV orange / time olive arcs)
         // is deliberately gone — EVERY knob value arc is the same light blue,
         // COL_HIGHLIGHT (styles.arcIndicator default), per user call. The hue
         // lambdas collapsed into plain smallArc/wideArc; section identity now

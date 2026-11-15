@@ -191,7 +191,7 @@ static lv_obj_t* createModRing(lv_obj_t* parent, lv_coord_t arcSize) {
 // change silently broke every knob, and "one knob" was 13 places. It is all
 // here now, next to the only factory that builds caps.
 //
-// Look (AvonSynth VCO module): a BLACK panel carrying SILVER knurled caps —
+// Look: a BLACK panel carrying SILVER knurled caps —
 //   * body/rim — the cap itself is the turned outer cylinder: bright steel on
 //                the lit (upper-left) sweep shading to dark steel on the
 //                shadow side, with a TIGHT ring of fine radial teeth cut into
@@ -912,8 +912,8 @@ void UIWidgets::createArcEx(lv_obj_t* parent, int paramIndex, const char* name,
     attachArcDrag(arc, ui);
 
     if (spec.hueOverride) {
-        // Functional color coding: value arc takes the section hue (Pigments
-        // style). Indicator + its glow shadow follow.
+        // Functional color coding: value arc takes the section hue. Indicator
+        // and its glow shadow follow.
         lv_obj_set_style_arc_color(arc, spec.arcHue, LV_PART_INDICATOR);
         lv_obj_set_style_shadow_color(arc, spec.arcHue, LV_PART_INDICATOR);
     }

@@ -1,4 +1,4 @@
-// Preset browser pure logic: u-he-style search parsing, favourites sidecar
+// Preset browser pure logic: search parsing, favourites sidecar
 // I/O, and drag-copy semantics. Header-only, NO LVGL, NO plugin includes —
 // tests/preset_browser_logic.cpp exercises this standalone with plain g++.
 #ifndef PRESET_BROWSER_LOGIC_HPP
@@ -26,7 +26,7 @@ START_NAMESPACE_DISTRHO
 
 namespace PresetBrowserLogic {
 
-// --- u-he search syntax ---
+// --- search syntax ---
 
 enum class QueryField { Name, Desc, Use, Author };
 

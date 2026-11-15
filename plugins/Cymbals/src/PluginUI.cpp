@@ -996,7 +996,7 @@ protected:
     //
     // lv_display_get_default() / lv_screen_active() / lv_layer_top() are
     // PROCESS-GLOBAL: with several plugin editors alive in one host process
-    // (Bitwig keeps them around), the "default" is whichever editor serviced
+    // (some hosts keep them around), the "default" is whichever editor serviced
     // its idle last. Resolving the screen/layer/texture through it builds or
     // draws one editor's UI on another editor's display — the mixed-zoom,
     // half-black second window. Every display-bound call in this file goes
@@ -1290,7 +1290,7 @@ private:
     HWND fGdiLayerParent = nullptr;  // parent it was created under
    #endif
     int fActiveStage = 1;  // IMPULSES is the default screen on load
-    PresetBrowser fPresetBrowser;               // u-he-style preset browser panel
+    PresetBrowser fPresetBrowser;               // preset browser panel
     // UI-level undo: groups of parameter values captured before a UI edit.
     // Coalesced by time/index so one knob drag or one picker insertion is a
     // single undo step. 20 steps retained.
@@ -5618,7 +5618,7 @@ private:
 
     // --- F5: right-click / right-drag on a knob (DGL level) ---
     bool onMouse(const Widget::MouseEvent& ev) override {
-        // Bitwig/CLAP embeds our DGL window as a child of the host window.
+        // CLAP hosts embed our DGL window as a child of the host window.
         // A click must also focus the CHILD window, otherwise the host keeps
         // native keyboard focus and the text fields never receive WM_KEYDOWN
         // / WM_CHAR (typing worked in the standalone, silently not in CLAP).
@@ -6837,7 +6837,7 @@ private:
      * CLAP can deliver this from the plugin/audio thread (clap_plugin_state.load
      * and every updateStateValue echo), so nothing here may touch LVGL: the
      * payload is queued and applied by uiIdle() on the UI thread. Doing it
-     * inline was a real crash — Bitwig's undo replay fires hundreds of these
+     * inline was a real crash — a host's undo replay fires hundreds of these
      * back-to-back while uiIdle reads the same textareas, and the resulting
      * cross-thread std::string/LVGL writes killed the plugin host
      * (0xC0000005 inside lv_textarea_get_text -> strlen).
@@ -6845,7 +6845,7 @@ private:
     void stateChanged(const char* key, const char* value) override {
         if (key == nullptr) return;
         std::lock_guard<std::mutex> guard(fStateQueueMutex);
-        // Coalesce per key: Bitwig's undo replay can push hundreds of these
+        // Coalesce per key: a host's undo replay can push hundreds of these
         // back-to-back, and only the newest value of each key matters. This
         // also bounds the queue while the editor is closed (no drain runs).
         for (auto& kv : fStateQueue) {

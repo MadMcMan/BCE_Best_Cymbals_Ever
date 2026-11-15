@@ -38,7 +38,7 @@ inline void uiLockScroll(lv_obj_t* obj) {
 // is created. That default is one group for the whole PROCESS: it belongs to
 // whichever editor was constructed last, and an editor closing resets it to
 // NULL (lv_group_delete clears it). In a host that keeps several plugin
-// editors alive (Bitwig does), a textarea can therefore join ANOTHER editor's
+// editors alive (some hosts do), a textarea can therefore join ANOTHER editor's
 // group, or no group at all. Clicking it still focuses it in that group, but
 // keystrokes are delivered to the keypad indev's own group, so typing does
 // nothing.

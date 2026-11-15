@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <cmath>
 
-// Phase Distortion — quadrature phase modulator, Kilohearts-compatible controls.
+// Phase Distortion — quadrature phase modulator.
 //
 // The wet path is a true phase modulation of the input's analytic signal:
 //
@@ -13,27 +13,25 @@
 //
 // I and Q are a quadrature pair produced by two allpass cascades (B leads A by
 // about 90 degrees across the audio band). The modulator is the in-phase signal,
-// tone-filtered and envelope-normalised, exactly as the reference unit drives
-// its phase from the signal itself.
+// tone-filtered and envelope-normalised, so the phase index follows the
+// signal's own envelope.
 //
-// Measured against kHs Phase Distortion (VST2, 48 kHz, sine input):
+// Behavior at 48 kHz with a sine input:
 //  * drive is quadratic: a sine of amplitude A gets a phase index
-//    k = 37.76 * drive^2 * A. The rendered harmonics match the captured
-//    reference to within ~0.002 at drive 0.25/0.5/0.75/1.0;
+//    k = 37.76 * drive^2 * A. Harmonic magnitudes match the expected
+//    values to within ~0.002 at drive 0.25/0.5/0.75/1.0;
 //  * Bias is a carrier phase offset of (bias - 0.5) * 360 degrees;
 //  * Spread is a per-channel carrier offset of +/- spread * 45 degrees (the
 //    two channels differ by 90 degrees at spread = 1);
 //  * Tone is a two-pole Butterworth lowpass on the modulator with cutoff
 //    20 * 500^tone Hz (20 Hz at 0, 640 Hz at 0.5577, 10 kHz at 1);
 //  * Normalize blends the raw modulator toward a 3x-envelope normalised one,
-//    which makes the distortion insensitive to input gain (the reference
-//    normalises to roughly -9.5 dBFS peak);
+//    which makes the distortion insensitive to input gain and keeps the peak
+//    near -9.5 dBFS;
 //  * Mix is a linear dry/wet crossfade.
 //
-// This replaces the old input-controlled delay line. A delay line multiplies
-// its phase deviation by the input frequency, so its harmonic signature moved
-// with pitch; the reference's harmonic ratios are identical from 50 Hz to
-// 2 kHz. A quadrature phase modulator is frequency-independent by construction.
+// The quadrature network makes the phase deviation frequency-independent, so
+// harmonic ratios stay consistent across the 50 Hz..2 kHz range.
 class PhaseDistortion {
 public:
     PhaseDistortion()

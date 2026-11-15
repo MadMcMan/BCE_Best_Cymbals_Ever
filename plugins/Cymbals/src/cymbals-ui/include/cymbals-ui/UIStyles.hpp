@@ -105,7 +105,7 @@ struct UIStyles {
     }
 
     void init() {
-        // Panel style: layered Pigments-style plate — whisper of a raised top
+        // Panel style: layered plate — whisper of a raised top
         // edge over the plate base, dark seam border, soft drop shadow.
         lv_style_init(&panel);
         lv_style_set_bg_color(&panel, lv_color_hex(0x303236));  // raised top edge
@@ -243,7 +243,7 @@ struct UIStyles {
         lv_style_set_text_color(&label, COL_TEXT);
         lv_style_set_text_font(&label, getScaledFont());
 
-        // Section Title style: bright caps with Pigments-style tracking
+        // Section Title style: bright caps with wide tracking
         lv_style_init(&title);
         lv_style_set_text_color(&title, COL_TITLE);
         lv_style_set_text_font(&title, getScaledFont());

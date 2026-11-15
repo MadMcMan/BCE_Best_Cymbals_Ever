@@ -20,7 +20,7 @@ struct UIWidgets {
         lv_coord_t ringPad = 28;
         lv_coord_t labelMarginBottom = 1;
         lv_coord_t valueMarginTop = 1;
-        // Functional color coding (Pigments-style): when hueOverride is set
+        // Functional color coding: when hueOverride is set
         // the value arc takes the section hue. arcHue is the lv_color_t the
         // override resolves to.
         bool hueOverride = false;

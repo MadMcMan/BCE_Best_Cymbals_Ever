@@ -91,7 +91,7 @@ struct UIKeyboard {
             // Center the black key on the gap between the two adjacent white keys.
             lv_obj_set_pos(btn, (blackKeys[i].afterWhite + 1) * pitch - gap / 2 - blackW / 2, 0);
 
-            // Visible dark-gray face (Serum/Pigments black-key read): subtle
+            // Visible dark-gray face (black-key read): subtle
             // vertical sheen + lighter top edge so the keys read against the
             // dark footer (critic round 7).
             lv_obj_set_style_bg_color(btn, lv_color_hex(0x2E3238), 0);

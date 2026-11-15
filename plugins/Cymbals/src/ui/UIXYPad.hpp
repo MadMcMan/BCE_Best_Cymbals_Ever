@@ -1646,7 +1646,7 @@ private:
                     }
                 }
 
-                // Soft glow under the selected curve (Pigments-style lit trace),
+                // Soft glow under the selected curve (lit trace),
                 // then the stroked curve on top. Both read the smoothed
                 // response so a drag jitters neither the trace nor its glow.
                 if (isSelected) {

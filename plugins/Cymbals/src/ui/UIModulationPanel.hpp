@@ -27,7 +27,7 @@
 // one always-visible cell per modulation source AND per macro (15 total),
 // carrying identity colour, name, type, on/off state and a live level — the
 // whole modulation landscape legible before any editor is opened (the
-// round-16 critic's exact gap against Pigments' source strip). The rail's 11
+// round-16 critic's exact gap in the source strip). The rail's 11
 // level meters were the same information minus the names, the types, the
 // enable state and the selection, and they sat below the fold where the eye
 // reached them last.
@@ -86,8 +86,8 @@ static inline void applyModToggleStyle(lv_obj_t* btn, UIStyles& sty, bool on) {
 }
 
 // ============================================================================
-// Round 7: Pigments-style modal chrome, shared by every modulation surface
-// (drawer, source-editor popup, target picker). Pigments modals are a single
+// Round 7: layered modal chrome, shared by every modulation surface
+// (drawer, source-editor popup, target picker). The modals are a single
 // dark scrim + one centered value-stepped card — the kit palette renders that
 // as COL_BG scrim at 70% over the plate base. The helpers below are the ONLY
 // sanctioned way to build these surfaces; open drawers/cards by hand and the
@@ -165,7 +165,7 @@ static inline lv_obj_t* modHeaderCreate(lv_obj_t* card, UIStyles& sty,
         lv_obj_set_style_text_letter_space(title, scaled(2), 0);
     }
     if (pillText) {
-        // Rounded pill tag (Pigments mod-assignment chip): panel bg, colored
+        // Rounded pill tag (mod-assignment chip): panel bg, colored
         // border (2px scaled — 1.5px rounds to unreadable hairlines at 1x),
         // horizontal pad 10 / vertical pad 1 (≈12px tall chip).
         lv_obj_t* pill = lv_obj_create(head);
@@ -223,7 +223,7 @@ static inline lv_obj_t* modCloseBtnCreate(lv_obj_t* head, UIStyles& sty,
     return btn;
 }
 
-// Standard modal entrance: fade + 96%→100% scale, 220ms ease-out. Pigments
+// Standard modal entrance: fade + 96%→100% scale, 220ms ease-out. The
 // modals settle instantly readable — no slide, no overshoot.
 static inline void modCardEnter(lv_obj_t* card) {
     lv_obj_set_style_transform_pivot_x(card, lv_pct(50), 0);
@@ -436,7 +436,7 @@ public:
         // subtracts this from the knob column height, not the label alone.
         lv_obj_t* connHead = nullptr;
         lv_obj_t* connAddBtn = nullptr; // popup "+ ADD" route button
-        // lv_list so rows are Pigments-style flex cards. targetSearchCb
+        // lv_list so rows are flex cards. targetSearchCb
         // rebuilds through this pointer instead of hunting lv_list_class.
         lv_obj_t* targetPickerList = nullptr;
     };
@@ -749,7 +749,7 @@ private:
     static void drawRouteVisCellCb(lv_event_t* e);
     static void drawDepthChipCb(lv_event_t* e);
     static void syncRouteVisuals(State* st);
-    // Target-picker row builder (round 7): Pigments-style flex row with
+    // Target-picker row builder (round 7): flex row with
     // category tag and routed marker. Shared by openTargetPicker and
     // targetSearchCb so both surfaces stay identical.
     static void addPickerRow(State* st, lv_obj_t* list, uint32_t param, const std::string& name);
@@ -998,7 +998,7 @@ inline UIModulationPanel::State* UIModulationPanel::open(AbstractCymbalsUI* ui, 
     buildMatrix(st, middle);
     buildMacros(st);
 
-    // Pigments modal entrance: soft fade + settle, NOT a scale-from-zero pop.
+    // Modal entrance: soft fade + settle, NOT a scale-from-zero pop.
     modCardEnter(st->drawer);
 
     // 16 ms playhead / source poller (also drives MSEG playhead redraw).
@@ -1790,7 +1790,7 @@ inline void UIModulationPanel::buildSourceStrip(State* st) {
         lv_obj_t* pill = lv_btn_create(strip);
         lv_obj_set_size(pill, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
         st->styles->applyMomentaryButton(pill);
-        // Pill-tag spec (Pigments mod-assignment chip): rounded-full, panel
+        // Pill-tag spec (mod-assignment chip): rounded-full, panel
         // bg, pad 6/10, the SOURCE's own color as border (unified header
         // pills — selection thickens the border, never swaps hue).
         lv_obj_set_style_pad_hor(pill, scaled(10), 0);
@@ -4097,7 +4097,7 @@ inline void UIModulationPanel::buildMacros(State* st) {
 // routable set, named, typed, on/off, colour-coded, live-metered and
 // clickable. This is the round-16 critic's gap verbatim: the page had no way
 // to see what modulation sources exist or their state without opening an
-// editor, while Pigments shows its entire source strip at once.
+// editor, while the source strip shows every source at once.
 //
 // Geometry is deterministic, not flex-grown: the strip is one fixed-height
 // band (46px) and every cell is a fixed-height COLUMN whose children are
@@ -5225,7 +5225,7 @@ inline void UIModulationPanel::matrixFilterClearCb(lv_event_t* e) {
 // Target picker modal
 // ============================================================================
 
-// Pigments-style picker row: transparent flex card, name label, category tag
+// Picker row: transparent flex card, name label, category tag
 // pill (derived from the parameter's name prefix — there is no category
 // metadata on the params, and inventing one is out of scope), and a 6px
 // COL_MOD routed dot when any live route targets this param. Hover washes

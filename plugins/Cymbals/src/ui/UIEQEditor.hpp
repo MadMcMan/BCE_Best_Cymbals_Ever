@@ -2314,7 +2314,7 @@ if (gainRelevant) {
             rect_dsc.border_width = 1;
             rect_dsc.border_color = off ? COL_TEXT_DIM : lv_color_white();
             rect_dsc.border_opa = off ? LV_OPA_50 : LV_OPA_60;
-            // Strong glow under the node dot (Pigments-style lit handle); a
+            // Strong glow under the node dot (lit handle); a
             // disabled band has no glow, matching its flat grey response.
             rect_dsc.shadow_color = bandColor[i];
             rect_dsc.shadow_width = off ? 0 : 14;
