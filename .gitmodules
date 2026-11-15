@@ -10,3 +10,6 @@
 [submodule "deps/airwindows"]
 	path = deps/airwindows
 	url = https://github.com/airwindows/airwindows.git
+[submodule "deps/simde"]
+	path = deps/simde
+	url = https://github.com/simd-everywhere/simde

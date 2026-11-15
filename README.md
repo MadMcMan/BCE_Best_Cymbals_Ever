@@ -79,6 +79,7 @@ The FX chain and filter models include these imported or vendored sources:
 | CloudSeedCore | CloudSeed Reverb | MIT |
 | Signalsmith Audio | Signalsmith Chorus and Signalsmith Stretch, with the Signalsmith DSP/linear support layers | MIT |
 | Soundpipe | Soundpipe Phaser | MIT |
+| `simde` | Portable SIMD/SSE emulation for ARM and universal macOS builds | MIT |
 | HumpCrusher | HumpCrusher distortion | AGPLv3 |
 | Project internal | 33 native EQ/filter models and 23 filterbank topologies | AGPLv3 |
 
@@ -89,7 +90,7 @@ The project-owned `cymbals-ui` control kit is MIT; see the License section for t
 ### Prerequisites
 - **Compiler**: MinGW-w64 (GCC) with C++17 (C++20 is used for the sst-effects translation unit)
 - **Tools**: CMake 3.15+, Git
-- **Submodules**: DPF, LVGL, DPF-Widgets, and Airwindows
+- **Submodules**: DPF, LVGL, DPF-Widgets, Airwindows, and simde
 - **Python**: not required to configure or build on Linux, macOS, or Windows
 
 ### Build Steps
@@ -158,7 +159,7 @@ Release bundles are produced by the tag-driven GitHub Actions workflow. Local pa
 - `plugins/Cymbals/src/` - Core DSP and UI source.
 - `plugins/Cymbals/src/ui/tabs/` - LVGL stage-tab builders for `IMPULSES`, `DISPERSION`, `FILTERS`, `COLOUR`, and `FX CHAIN`; the `MOD` and `PRESET` surfaces are built from their respective UI modules in `PluginUI.cpp`.
 - `plugins/Cymbals/src/cymbals-ui/` - Project-owned LVGL control kit (knobs, styles, shared palette).
-- `deps/DPF`, `deps/lvgl`, `deps/dpf-widgets`, `deps/airwindows` - Pinned dependency submodules.
+- `deps/DPF`, `deps/lvgl`, `deps/dpf-widgets`, `deps/airwindows`, `deps/simde` - Pinned dependency submodules.
 - `deps/vendored-fx/` - Header/source-only FX dependencies included directly by CMake.
 - `deps/sst-*`, `deps/fmt/` - Vendored header-only DSP/support libraries.
 
@@ -178,7 +179,7 @@ The combined plugin is distributed under the GNU Affero General Public License v
 
 Third-party terms:
 - `DPF` and `DPF-Widgets`: ISC-style permissive licenses.
-- `LVGL`, `Airwindows`, `fmt`, CloudSeedCore, Signalsmith, and Soundpipe: MIT.
+- `LVGL`, `Airwindows`, `fmt`, `simde`, CloudSeedCore, Signalsmith, and Soundpipe: MIT.
 - `sst-effects`, `sst-basic-blocks`, `sst-filters`, `sst-waveshapers`, and the Surge FX extraction: GPLv3.
 - `UnifiedFilter` contains GPLv3 adaptations of sst-filters models (Korg35, diode ladder, OB-Xd, TriPole, Cytomic tilt).
 - HumpCrusher: AGPLv3.

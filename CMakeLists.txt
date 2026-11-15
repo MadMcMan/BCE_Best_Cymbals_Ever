@@ -7,13 +7,14 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # GPLv3 sst-* sources (Surge FX/filters) + MIT fmt. HumpCrusher (AGPLv3) is
 # vendored under plugins/Cymbals/src/fx/hump.
-# Header-only; native SSE is available on this x64 build so simde is skipped.
+# Header-only SIMD helpers; simde supplies SSE emulation on ARM/universal builds.
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/deps/sst-effects/include
     ${CMAKE_CURRENT_SOURCE_DIR}/deps/sst-basic-blocks/include
     ${CMAKE_CURRENT_SOURCE_DIR}/deps/sst-filters/include
     ${CMAKE_CURRENT_SOURCE_DIR}/deps/sst-waveshapers/include
     ${CMAKE_CURRENT_SOURCE_DIR}/deps/fmt/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/deps/simde
     ${CMAKE_CURRENT_SOURCE_DIR}/deps/vendored-fx/cloudseedcore
     ${CMAKE_CURRENT_SOURCE_DIR}/deps/vendored-fx/signalsmith-basics/include
     ${CMAKE_CURRENT_SOURCE_DIR}/deps/vendored-fx/signalsmith-dsp/include
@@ -22,12 +23,17 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/deps/vendored-fx/signalsmith-linear/include
     ${CMAKE_CURRENT_SOURCE_DIR}/deps/vendored-fx/soundpipe/h
     ${CMAKE_CURRENT_SOURCE_DIR}/deps/vendored-fx/soundpipe/lib/faust)
-add_compile_definitions(SIMDE_UNAVAILABLE=1 FMT_HEADER_ONLY=1 _USE_MATH_DEFINES)
+add_compile_definitions(FMT_HEADER_ONLY=1 _USE_MATH_DEFINES)
 # sst-effects requires C++20 concepts; keep the rest of the plugin on C++17.
+set(_surge_fx_options "-std=c++20;-w")
+if(NOT (APPLE AND CMAKE_OSX_ARCHITECTURES MATCHES "arm64")
+   AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
+    list(APPEND _surge_fx_options "-msse4.2")
+endif()
 set_source_files_properties(plugins/Cymbals/src/surge/SurgeFx.cpp PROPERTIES
     CXX_STANDARD 20
     CXX_STANDARD_REQUIRED ON
-    COMPILE_OPTIONS "-std=c++20;-msse4.2;-w")
+    COMPILE_OPTIONS "${_surge_fx_options}")
 
 set(NAME MadMcManBCE)
 set(PROJECT_VERSION_NUMBER "0.9.0")

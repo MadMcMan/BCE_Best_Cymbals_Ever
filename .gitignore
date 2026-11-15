@@ -48,6 +48,8 @@ deps/*
 !deps/sst-waveshapers/**
 !deps/fmt/
 !deps/fmt/**
+!deps/simde/
+!deps/simde/**
 # CMake includes headers and sources from this tree; it is a build input, not a
 # scratch checkout. Keep it tracked so a fresh clone can configure.
 !deps/vendored-fx/
