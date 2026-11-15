@@ -1268,7 +1268,6 @@ private:
     int fActiveFinalSubtab = 0;                  // 0 = comb bank, 1 = EQ
     
     // Ownership: managed by LVGL parent (root screen)
-    lv_obj_t* fContentArea = nullptr;           // Panel stack container (replaces tabview)
     lv_obj_t* fStagePanels[7] = {nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr};
     lv_obj_t* fStagePills[7] = {nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr};
     lv_obj_t* fPresetNavLabel = nullptr;        // Header preset-name label (click -> browser)
