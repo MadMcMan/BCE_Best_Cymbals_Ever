@@ -12,8 +12,10 @@ This instrument was strongly influenced by the ideas in this video:
 
 ## Sponsor This Project
 
-- GitHub Sponsors: https://github.com/sponsors/MadMcMan
-- Patreon: https://www.patreon.com/MadMcMan
+- **MadMcMan's BCE**: [GitHub Sponsors](https://github.com/sponsors/MadMcMan) · [Patreon](https://www.patreon.com/MadMcMan)
+- **falkTX / DPF**: [GitHub Sponsors](https://github.com/sponsors/falkTX) · [Patreon](https://www.patreon.com/falkTX)
+- **Airwindows (Chris Johnson)**: [Patreon](https://www.patreon.com/airwindows)
+- **Zion Jaymes**: [Patreon](https://www.patreon.com/ZionJaymes)
 
 ## Credits and Support
 
