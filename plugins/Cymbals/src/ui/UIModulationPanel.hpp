@@ -209,7 +209,7 @@ static inline lv_obj_t* modCloseBtnCreate(lv_obj_t* head, UIStyles& sty,
     lv_obj_set_size(btn, scaled(32), scaled(32));
     sty.applyMomentaryButton(btn);
     // Hover: brighter face + border, tiny lift. Pressed: sink 1px (base style).
-    lv_obj_set_style_bg_color(btn, lv_color_hex(0x43474D), LV_STATE_HOVERED);
+    lv_obj_set_style_bg_color(btn, COL_CONTROL_HOVER, LV_STATE_HOVERED);
     lv_obj_set_style_border_color(btn, COL_TEXT_DIM, LV_STATE_HOVERED);
     lv_obj_set_style_border_width(btn, 1, LV_STATE_HOVERED);
     lv_obj_set_style_border_width(btn, 1, 0);
@@ -2700,7 +2700,7 @@ inline void UIModulationPanel::buildMatrix(State* st, lv_obj_t* parent) {
         lv_obj_set_size(dice, scaled(26), scaled(26));
         st->styles->applyMomentaryButton(dice);
         lv_obj_set_style_pad_all(dice, 0, 0);
-        lv_obj_set_style_bg_color(dice, lv_color_hex(0x36393E), 0);
+        lv_obj_set_style_bg_color(dice, COL_CONTROL_FACE, 0);
         lv_obj_set_user_data(dice, (void*)(intptr_t)-1);
         lv_obj_add_event_cb(dice, matrixRandomAllCb, LV_EVENT_CLICKED, st);
         uiAttachTooltip(dice, "Randomize enabled sources and rebuild 4-5 maps per source");
@@ -3551,7 +3551,7 @@ inline void UIModulationPanel::buildSrcEditor(State* st) {
         lv_obj_set_size(dice, scaled(26), scaled(26));
         sty.applyMomentaryButton(dice);
         lv_obj_set_style_pad_all(dice, 0, 0);
-        lv_obj_set_style_bg_color(dice, lv_color_hex(0x36393E), 0);
+        lv_obj_set_style_bg_color(dice, COL_CONTROL_FACE, 0);
         lv_obj_set_user_data(dice, (void*)(intptr_t)-1);
         lv_obj_add_event_cb(dice, srcRandomCb, LV_EVENT_CLICKED, st);
         uiAttachTooltip(dice, "Randomize this source (only when enabled)");

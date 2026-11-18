@@ -2188,7 +2188,7 @@ private:
 
         // Dark background overlay for stronger contrast against grid + curves
         lv_draw_rect_dsc_t bg_dsc; lv_draw_rect_dsc_init(&bg_dsc);
-        bg_dsc.bg_color = lv_color_hex(0x1A2228);
+        bg_dsc.bg_color = COL_EQ_PLOT_BG;
         bg_dsc.bg_opa = LV_OPA_COVER;
         lv_draw_rect(layer, &bg_dsc, &coords);
         const int plotTop = 16;

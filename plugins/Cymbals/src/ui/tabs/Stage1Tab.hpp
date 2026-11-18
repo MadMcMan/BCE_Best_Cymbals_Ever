@@ -428,7 +428,7 @@ struct Stage1Tab {
             lv_obj_set_size(btn, scaled(resetStyle ? 64 : 28), scaled(resetStyle ? 28 : 28));
             styles.applyMomentaryButton(btn);
             lv_obj_clear_state(btn, LV_STATE_CHECKED);
-            lv_obj_set_style_bg_color(btn, lv_color_hex(0x36393E), 0);
+            lv_obj_set_style_bg_color(btn, COL_CONTROL_FACE, 0);
             lv_obj_set_user_data(btn, (void*)(intptr_t)-1);
             lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, ui);
             uiAttachTooltip(btn, tip);
@@ -1001,7 +1001,7 @@ struct Stage1Tab {
             lv_obj_t* eqDice = lv_btn_create(tools);
             lv_obj_set_size(eqDice, scaled(28), scaled(28));
             styles.applyMomentaryButton(eqDice);
-            lv_obj_set_style_bg_color(eqDice, lv_color_hex(0x36393E), 0);
+            lv_obj_set_style_bg_color(eqDice, COL_CONTROL_FACE, 0);
             lv_obj_set_user_data(eqDice, (void*)(intptr_t)-1);
             lv_obj_add_event_cb(eqDice, randomEqCb, LV_EVENT_CLICKED, ui);
             uiAttachTooltip(eqDice, "Randomize the stick EQ");
@@ -1018,7 +1018,7 @@ struct Stage1Tab {
                 lv_obj_t* reset = lv_btn_create(eqSettingsHost);
                 lv_obj_set_size(reset, scaled(64), scaled(28));
                 styles.applyMomentaryButton(reset);
-                lv_obj_set_style_bg_color(reset, lv_color_hex(0x36393E), 0);
+                lv_obj_set_style_bg_color(reset, COL_CONTROL_FACE, 0);
                 lv_obj_set_user_data(reset, (void*)(intptr_t)-1);
                 lv_obj_add_event_cb(reset, resetEqCb, LV_EVENT_CLICKED, ui);
                 uiAttachTooltip(reset, "Reset the stick EQ");

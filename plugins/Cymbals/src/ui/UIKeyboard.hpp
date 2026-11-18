@@ -67,7 +67,7 @@ struct UIKeyboard {
             // read as misaligned (critic round 1). 12px tracked text sits
             // unambiguously inside its own 40px white key.
             lv_obj_set_style_text_font(lbl, getScaledSmallFont(), 0);
-            lv_obj_set_style_text_color(lbl, lv_color_hex(0x0E1116), 0);
+            lv_obj_set_style_text_color(lbl, COL_KEYBOARD_TEXT_DARK, 0);
             lv_obj_set_style_text_letter_space(lbl, scaled(1), 0);
             lv_obj_align(lbl, LV_ALIGN_BOTTOM_MID, 0, scaled(-8));  // clear the window-bottom clip
 
@@ -94,10 +94,10 @@ struct UIKeyboard {
             // Visible dark-gray face (black-key read): subtle
             // vertical sheen + lighter top edge so the keys read against the
             // dark footer (critic round 7).
-            lv_obj_set_style_bg_color(btn, lv_color_hex(0x2E3238), 0);
-            lv_obj_set_style_bg_grad_color(btn, lv_color_hex(0x1C1F23), 0);
+            lv_obj_set_style_bg_color(btn, COL_KEYBOARD_BLACK_FACE, 0);
+            lv_obj_set_style_bg_grad_color(btn, COL_KEYBOARD_BLACK_GRAD, 0);
             lv_obj_set_style_bg_grad_dir(btn, LV_GRAD_DIR_VER, 0);
-            lv_obj_set_style_border_color(btn, lv_color_hex(0x3A3E44), 0);
+            lv_obj_set_style_border_color(btn, COL_KEYBOARD_BLACK_BORDER, 0);
             lv_obj_set_style_border_width(btn, 1, 0);
             lv_obj_set_style_border_side(btn, LV_BORDER_SIDE_TOP, 0);
             lv_obj_set_style_bg_color(btn, COL_KEYBOARD_BLACK_PRESSED, LV_STATE_PRESSED);

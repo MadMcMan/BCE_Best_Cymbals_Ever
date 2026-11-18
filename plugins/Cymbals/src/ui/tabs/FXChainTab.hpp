@@ -752,7 +752,7 @@ inline void FXChainTab::build(lv_obj_t* tab, AbstractCymbalsUI* ui, UIStyles& st
             lv_obj_set_size(btn, scaled(28), scaled(28));
             styles.applyMomentaryButton(btn);
             lv_obj_clear_state(btn, LV_STATE_CHECKED);
-            lv_obj_set_style_bg_color(btn, lv_color_hex(0x36393E), 0);
+            lv_obj_set_style_bg_color(btn, COL_CONTROL_FACE, 0);
             if (shuffle) {
                 lv_obj_t* l = lv_label_create(btn);
                 lv_label_set_text(l, LV_SYMBOL_SHUFFLE);
@@ -869,7 +869,7 @@ inline void FXChainTab::build(lv_obj_t* tab, AbstractCymbalsUI* ui, UIStyles& st
                     lv_obj_set_size(dice, scaled(26), scaled(18));
                     styles.applyMomentaryButton(dice);
                     lv_obj_clear_state(dice, LV_STATE_CHECKED);
-                    lv_obj_set_style_bg_color(dice, lv_color_hex(0x36393E), 0);
+                    lv_obj_set_style_bg_color(dice, COL_CONTROL_FACE, 0);
                     lv_obj_t* die = uiDiceIcon(dice, COL_TEXT);
                     if (die != nullptr) lv_obj_center(die);
                     lv_obj_set_user_data(dice,
@@ -882,7 +882,7 @@ inline void FXChainTab::build(lv_obj_t* tab, AbstractCymbalsUI* ui, UIStyles& st
                         lv_obj_set_size(shuffle, scaled(26), scaled(18));
                         styles.applyMomentaryButton(shuffle);
                         lv_obj_clear_state(shuffle, LV_STATE_CHECKED);
-                        lv_obj_set_style_bg_color(shuffle, lv_color_hex(0x36393E), 0);
+                        lv_obj_set_style_bg_color(shuffle, COL_CONTROL_FACE, 0);
                         lv_obj_t* sl = lv_label_create(shuffle);
                         lv_label_set_text(sl, LV_SYMBOL_SHUFFLE);
                         lv_obj_set_style_text_font(sl, &lv_font_montserrat_12, 0);

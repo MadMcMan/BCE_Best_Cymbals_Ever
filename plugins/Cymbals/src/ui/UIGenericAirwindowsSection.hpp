@@ -106,7 +106,7 @@ public:
 
         // Drag handle for reordering (left of title)
         lv_obj_t* dragHandle = lv_obj_create(header);
-        lv_obj_set_size(dragHandle, 40, 28);
+        lv_obj_set_size(dragHandle, scaled(40), scaled(28));
         lv_obj_set_style_bg_color(dragHandle, COL_ACCENT_DIM, 0);
         lv_obj_set_style_border_width(dragHandle, 0, 0);
         lv_obj_set_style_radius(dragHandle, 4, 0);

@@ -168,7 +168,7 @@ struct Stage2Tab {
             lv_obj_set_size(rndBtn, scaled(44), scaled(32));
             styles.applyMomentaryButton(rndBtn);
             lv_obj_clear_state(rndBtn, LV_STATE_CHECKED);
-            lv_obj_set_style_bg_color(rndBtn, lv_color_hex(0x36393E), 0);
+            lv_obj_set_style_bg_color(rndBtn, COL_CONTROL_FACE, 0);
             // Local payload -1: setActiveStage() only skips user_data 0/1, and
             // a null payload (0) made this dice inherit DISP 1's CHECKED/red
             // state whenever the sub-tab changed.
