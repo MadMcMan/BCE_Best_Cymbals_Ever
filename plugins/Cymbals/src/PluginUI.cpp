@@ -178,6 +178,13 @@ public:
           fNumCombStages(8)
     {
         setSize(DISTRHO_UI_DEFAULT_WIDTH, DISTRHO_UI_DEFAULT_HEIGHT);
+        // Keep the resizable window on the 16:9 design manifold. Without a
+        // native aspect constraint, dragging the top or side edge changes the
+        // window shape while the fixed canvas still fits by transform, which
+        // leaves the unused axis as letterbox bars. The 1024x576 floor (0.8x
+        // design scale) allows smaller desktop windows; the zoom buttons keep
+        // their separate 1280-wide floor.
+        setGeometryConstraints(1024, 576, true, false, false);
         
         for (int i = 0; i < PluginCymbals::kParameterCount; ++i) {
             fParams[i] = 0.0f;
@@ -563,6 +570,9 @@ public:
         // as well; it is a single-pad invalidate and a no-op for params that
         // do not affect a chart.
         invalidateCombVisualsForParam(index);
+        int route = -1, routeField = -1;
+        if (routeFieldForIndex(index, route, routeField))
+            propagateRouteField(route, routeField, value);
     }
     void editParameter(uint32_t index, bool start) override {
         if (index >= PluginCymbals::kParameterCount) return;
@@ -1220,6 +1230,10 @@ public:
     // otherwise feed back and overwrite the values just written.
     bool isInSync() const override { return fInSync; }
 
+    bool createModulationRoute(int source, int target, float amountNorm) override {
+        return createRoute(source, target, amountNorm) >= 0;
+    }
+
 private:
     bool fUIBuilt;
     bool fAnalysisPinned;
@@ -1436,7 +1450,16 @@ private:
         float startAmount = 0.0f;
         float pendingAmount = 0.0f; // bipolar amount staged while no route is reused
         int routeIndex = -1;        // >= 0 only when an EXISTING route was reused
+        std::vector<uint32_t> targets;
+        std::vector<int> routeIndices;
     } fModRightDrag;
+    struct RouteGroup {
+        int count = 0;
+        int routes[8] = {};
+        int targets[8] = {};
+    };
+    std::vector<RouteGroup> fRouteGroups;
+    bool fPropagatingRouteGroup = false;
     int fLastRouted[64] = {};
     int fLastRoutedCount = 0;
     // Cache for routed ring bg-angles: avoids re-setting lv_arc_set_bg_angles
@@ -5500,13 +5523,72 @@ private:
         return -1;
     }
 
-    int createRoute(int source, int target, float amountNorm) {
+    static bool routeFieldForIndex(uint32_t index, int& route, int& field) {
+        const uint32_t first = (uint32_t)PluginCymbals::kParamRoute1Source;
+        const uint32_t last = (uint32_t)PluginCymbals::kParamRoute48Enabled;
+        if (index < first || index > last) return false;
+        route = (int)((index - first) / 5u);
+        field = (int)((index - first) % 5u);
+        return route >= 0 && route < ModulationEngine::kMaxActiveRoutes;
+    }
+
+    void removeRouteFromGroups(int route) {
+        for (RouteGroup& group : fRouteGroups) {
+            for (int i = 0; i < group.count; ++i)
+                if (group.routes[i] == route) group.routes[i] = -1;
+        }
+    }
+
+    void registerRouteGroup(const int* routes, const int* targets, int count) {
+        if (count < 2) return;
+        for (int i = 0; i < count; ++i) removeRouteFromGroups(routes[i]);
+        RouteGroup group;
+        group.count = std::min(count, 8);
+        for (int i = 0; i < group.count; ++i) {
+            group.routes[i] = routes[i];
+            group.targets[i] = targets[i];
+        }
+        fRouteGroups.push_back(group);
+    }
+
+    void propagateRouteField(int route, int field, float value) {
+        if (fPropagatingRouteGroup) return;
+        if (field == 1) {
+            // Re-aiming one copy detaches it from the group; do not overwrite
+            // another band's target.
+            removeRouteFromGroups(route);
+            return;
+        }
+        const uint32_t base = (uint32_t)PluginCymbals::kParamRoute1Source;
+        fPropagatingRouteGroup = true;
+        for (RouteGroup& group : fRouteGroups) {
+            int pos = -1;
+            for (int i = 0; i < group.count; ++i)
+                if (group.routes[i] == route) { pos = i; break; }
+            if (pos < 0) continue;
+            for (int i = 0; i < group.count; ++i) {
+                if (i == pos || group.routes[i] < 0) continue;
+                const uint32_t memberBase = base + (uint32_t)group.routes[i] * 5u;
+                if ((int)std::lround(fParams[memberBase + 1]) != group.targets[i]) {
+                    group.routes[i] = -1;
+                    continue;
+                }
+                const uint32_t memberIndex = memberBase + (uint32_t)field;
+                setParamValue(memberIndex, value);
+                syncParamWidget(memberIndex, value);
+            }
+        }
+        fPropagatingRouteGroup = false;
+    }
+
+    int createRouteSingle(int source, int target) {
         int freeRoute = -1;
         for (int r = 0; r < ModulationEngine::kMaxActiveRoutes; ++r) {
             const uint32_t rb = (uint32_t)PluginCymbals::kParamRoute1Source + (uint32_t)r * 5u;
             if (fParams[rb + 4] <= 0.5f) { freeRoute = r; break; }
         }
         if (freeRoute < 0) return -1;
+        removeRouteFromGroups(freeRoute);
         // Auto-enable the source: a route from a disabled source is guaranteed
         // silent, and disabled sources draw no badge playhead (Q1).
         const uint32_t srcEn = (uint32_t)PluginCymbals::kParamModSrc1Type
@@ -5521,18 +5603,68 @@ private:
         editParameter(rb, true);
         setParamValue(rb + 0, (float)source);
         setParamValue(rb + 1, (float)target);
-        setParamValue(rb + 2, amountNorm);
         setParamValue(rb + 3, 0.0f); // clear a reused slot's stale macro scale
         setParamValue(rb + 4, 1.0f);
         editParameter(rb, false);
         syncParamWidget(rb + 0, (float)source);
         syncParamWidget(rb + 1, (float)target);
-        syncParamWidget(rb + 2, amountNorm);
         syncParamWidget(rb + 3, 0.0f);
         syncParamWidget(rb + 4, 1.0f);
+        return freeRoute;
+    }
+
+    int createRoute(int source, int target, float amountNorm) {
+        // A modulation drop on one selected EQ band is a modulation drop on
+        // every selected band's corresponding control. The EQ editor owns the
+        // selection-to-parameter mapping; this layer only fans the routes out.
+        uint32_t targets[8] = {};
+        int targetCount = UIEQEditor::selectedModulationTargets((uint32_t)target, targets, 8);
+        if (targetCount <= 0) {
+            targets[0] = (uint32_t)target;
+            targetCount = 1;
+        }
+
+        // Preflight the whole group: a partial fan-out is worse than a clear
+        // MATRIX FULL result because some selected bands would silently move.
+        int missing = 0;
+        for (int i = 0; i < targetCount; ++i)
+            if (findRouteFor(source, (int)targets[i]) < 0) ++missing;
+        int freeSlots = 0;
+        for (int r = 0; r < ModulationEngine::kMaxActiveRoutes; ++r) {
+            const uint32_t rb = (uint32_t)PluginCymbals::kParamRoute1Source + (uint32_t)r * 5u;
+            if (fParams[rb + 4] <= 0.5f) ++freeSlots;
+        }
+        if (missing > freeSlots) return -1;
+
+        int routes[8] = {};
+        int routeTargets[8] = {};
+        for (int i = 0; i < targetCount; ++i) {
+            const int t = (int)targets[i];
+            int route = findRouteFor(source, t);
+            if (route < 0) route = createRouteSingle(source, t);
+            if (route < 0) return -1;
+            routes[i] = route;
+            routeTargets[i] = t;
+        }
+        // Existing routes can carry a different depth. Detach first so the
+        // amount writes cannot feed an old group, then make the new group
+        // start from one identical depth.
+        for (int i = 0; i < targetCount; ++i) removeRouteFromGroups(routes[i]);
+        for (int i = 0; i < targetCount; ++i) {
+            const uint32_t amtIdx = (uint32_t)PluginCymbals::kParamRoute1Source +
+                                    (uint32_t)routes[i] * 5u + 2u;
+            editParameter(amtIdx, true);
+            setParamValue(amtIdx, amountNorm);
+            editParameter(amtIdx, false);
+            syncParamWidget(amtIdx, amountNorm);
+        }
+        if (targetCount > 1) {
+            registerRouteGroup(routes, routeTargets, targetCount);
+        }
         if (fModDrawer) UIModulationPanel::refreshMatrix(fModDrawer);
         if (fModStage)  UIModulationPanel::refreshMatrix(fModStage);
-        return freeRoute;
+        const int routed = findRouteFor(source, target);
+        return routed >= 0 ? routed : routes[0];
     }
 
     // --- Shift = fine drag (precise dialling) on every knob ---
@@ -5932,6 +6064,8 @@ private:
         // self-consistent between gestures.
         fModRightDrag.startAmount = 0.0f;
         fModRightDrag.pendingAmount = 0.0f;
+        fModRightDrag.targets.clear();
+        fModRightDrag.routeIndices.clear();
     }
 
     void cymbalsModRightMouse(const Widget::MouseEvent& ev) {
@@ -5979,6 +6113,16 @@ private:
         fModRightDrag.source = fModDrawer ? fModDrawer->selectedSource : fLastModSource;
         fModRightDrag.pressX = (int)ev.pos.getX();
         fModRightDrag.pressY = (int)ev.pos.getY();
+        fModRightDrag.targets.clear();
+        fModRightDrag.routeIndices.clear();
+        uint32_t fanout[8] = {};
+        const int fanoutCount = UIEQEditor::selectedModulationTargets((uint32_t)hit, fanout, 8);
+        for (int i = 0; i < fanoutCount; ++i)
+            fModRightDrag.targets.push_back(fanout[i]);
+        if (fModRightDrag.targets.empty())
+            fModRightDrag.targets.push_back((uint32_t)hit);
+        for (uint32_t t : fModRightDrag.targets)
+            fModRightDrag.routeIndices.push_back(findRouteFor(fModRightDrag.source, (int)t));
         const int existing = findRouteFor(fModRightDrag.source, hit);
         fModRightDrag.routeIndex = existing;
         fModRightDrag.startAmount = (existing >= 0) ? fParams[(uint32_t)PluginCymbals::kParamRoute1Source + (uint32_t)existing * 5u + 2u] * 2.0f - 1.0f : 0.0f;
@@ -6000,23 +6144,32 @@ private:
         const float amount = std::clamp(fModRightDrag.startAmount + travel / 286.0f, -1.0f, 1.0f);
         // A new route is created on the FIRST motion (not at release), so the
         // modulation ring/amount follows the held right-drag immediately.
-        if (fModRightDrag.routeIndex < 0 && fModRightDrag.target >= 0) {
-            const int r = createRoute(fModRightDrag.source, fModRightDrag.target,
-                                      amount * 0.5f + 0.5f);
+        const float amountNorm = amount * 0.5f + 0.5f;
+        bool missingRoute = false;
+        for (int r : fModRightDrag.routeIndices)
+            if (r < 0) missingRoute = true;
+        if (missingRoute && fModRightDrag.target >= 0) {
+            const int r = createRoute(fModRightDrag.source, fModRightDrag.target, amountNorm);
             if (r < 0) {
                 showMatrixFullNotice(curX, curY);
                 fModRightDrag.moved = false;
                 return;
             }
-            fModRightDrag.routeIndex = r;
+            for (size_t i = 0; i < fModRightDrag.targets.size(); ++i)
+                fModRightDrag.routeIndices[i] =
+                    findRouteFor(fModRightDrag.source, (int)fModRightDrag.targets[i]);
+            fModRightDrag.routeIndex =
+                findRouteFor(fModRightDrag.source, fModRightDrag.target);
         }
         if (fModRightDrag.routeIndex >= 0) {
-            const float amountNorm = amount * 0.5f + 0.5f;
-            const uint32_t amtIdx = (uint32_t)PluginCymbals::kParamRoute1Source + (uint32_t)fModRightDrag.routeIndex * 5u + 2u;
-            editParameter(amtIdx, true);
-            setParamValue(amtIdx, amountNorm);
-            editParameter(amtIdx, false);
-            syncParamWidget(amtIdx, amountNorm);
+            for (int r : fModRightDrag.routeIndices) {
+                if (r < 0) continue;
+                const uint32_t amtIdx = (uint32_t)PluginCymbals::kParamRoute1Source + (uint32_t)r * 5u + 2u;
+                editParameter(amtIdx, true);
+                setParamValue(amtIdx, amountNorm);
+                editParameter(amtIdx, false);
+                syncParamWidget(amtIdx, amountNorm);
+            }
         } else {
             fModRightDrag.pendingAmount = amount;
         }

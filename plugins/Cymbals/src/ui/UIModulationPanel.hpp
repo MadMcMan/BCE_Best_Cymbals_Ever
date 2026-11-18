@@ -5057,28 +5057,17 @@ inline void UIModulationPanel::removeRouteCb(lv_event_t* e) {
 
 inline void UIModulationPanel::addRouteCb(lv_event_t* e) {
     State* st = static_cast<State*>(lv_event_get_user_data(e));
-    if (!st) return;
-    int freeRoute = -1;
-    for (int r = 0; r < ModulationEngine::kMaxActiveRoutes; ++r) {
-        if (st->fParams[routeBase(r) + 4] <= 0.5f) { freeRoute = r; break; }
-    }
-    if (freeRoute < 0) return; // matrix full: no-op at the 30-mod cap
-    const uint32_t rb = routeBase(freeRoute);
-    setParam(st, rb + 0, (float)st->selectedSource);
+    if (!st || !st->ui) return;
     int target = st->matrixFilterTarget;
     if (target < 0 || !st->ui->parameterIsContinuous((uint32_t)target)) {
         target = (int)PluginCymbals::kParamVolume; // Tone/Decay are intentionally not routable; land on a real target
     }
-    setParam(st, rb + 1, (float)target);
-    setParam(st, rb + 2, 0.75f); // +50 % (matches the cable-drop default)
-    setParam(st, rb + 3, 0.0f);  // clear a reused slot's stale macro scale
-    setParam(st, rb + 4, 1.0f);
-    // Auto-enable the source: a route from a disabled source is silent (Q1).
-    setParam(st, srcBase(st->selectedSource) + 1, 1.0f);
-    ensureModOn(st);
+    // The host UI owns EQ multi-selection fan-out and atomic matrix-capacity
+    // checks. Do not write a single route here or the group would diverge.
+    if (!st->ui->createModulationRoute(st->selectedSource, target, 0.75f)) return;
     st->matrixFilterTarget = -1;
     refreshMatrix(st);
-    if (st->ui) st->ui->onModRoutesChanged((void*)st);
+    st->ui->onModRoutesChanged((void*)st);
 }
 
 inline void UIModulationPanel::randomizeRoute(State* st, int r, bool preserveSource) {
