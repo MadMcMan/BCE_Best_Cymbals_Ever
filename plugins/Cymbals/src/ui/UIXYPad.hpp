@@ -76,7 +76,7 @@ struct UIXYPad {
                             OnCircleTouchedFn onCircleTouched = nullptr, void* circleTouchedUserData = nullptr) {
         // Ownership: parent (LVGL)
         lv_obj_t* obj = lv_obj_create(parent);
-        lv_obj_set_size(obj, 400, 400); 
+        lv_obj_set_size(obj, scaled(400), scaled(400));
         lv_obj_set_style_bg_color(obj, COL_PANEL, 0);
         lv_obj_set_style_bg_opa(obj, 255, 0);
         lv_obj_set_style_border_color(obj, COL_ACCENT, 0);

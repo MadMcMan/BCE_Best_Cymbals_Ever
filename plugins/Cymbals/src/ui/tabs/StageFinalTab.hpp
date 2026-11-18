@@ -713,7 +713,7 @@ struct StageFinalTab {
             lv_obj_set_size(dice, scaled(28), scaled(28));
             styles.applyMomentaryButton(dice);
             lv_obj_clear_state(dice, LV_STATE_CHECKED);
-            lv_obj_set_style_bg_color(dice, lv_color_hex(0x36393E), 0);
+            lv_obj_set_style_bg_color(dice, COL_CONTROL_FACE, 0);
             lv_obj_t* die = uiDiceIcon(dice, COL_TEXT);
             if (die != nullptr) lv_obj_center(die);
             lv_obj_set_user_data(dice, (void*)(intptr_t)-1);
@@ -1034,7 +1034,7 @@ struct StageFinalTab {
             lv_obj_set_size(eqRandBtn, scaled(28), scaled(28));
             styles.applyMomentaryButton(eqRandBtn);
             lv_obj_clear_state(eqRandBtn, LV_STATE_CHECKED);
-            lv_obj_set_style_bg_color(eqRandBtn, lv_color_hex(0x36393E), 0);
+            lv_obj_set_style_bg_color(eqRandBtn, COL_CONTROL_FACE, 0);
             lv_obj_t* eqDie = uiDiceIcon(eqRandBtn, COL_TEXT);
             if (eqDie != nullptr) lv_obj_center(eqDie);
             lv_obj_add_event_cb(eqRandBtn, finalEqRandomCb, LV_EVENT_CLICKED, ui);

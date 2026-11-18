@@ -561,7 +561,7 @@ struct Stage3Tab {
         lv_obj_set_user_data(randAllBtn, (void*)(intptr_t)-1);
         styles.applyMomentaryButton(randAllBtn);
         lv_obj_clear_state(randAllBtn, LV_STATE_CHECKED);
-        lv_obj_set_style_bg_color(randAllBtn, lv_color_hex(0x36393E), 0);
+        lv_obj_set_style_bg_color(randAllBtn, COL_CONTROL_FACE, 0);
         lv_obj_t* randAllDie = uiDiceIcon(randAllBtn, COL_TEXT);
         if (randAllDie != nullptr) lv_obj_center(randAllDie);
         uiAttachTooltip(randAllBtn, "Randomize group count and every filter in the bank");
@@ -575,7 +575,7 @@ struct Stage3Tab {
             lv_obj_set_user_data(randCountBtn, (void*)(intptr_t)-1);
             styles.applyMomentaryButton(randCountBtn);
             lv_obj_clear_state(randCountBtn, LV_STATE_CHECKED);
-            lv_obj_set_style_bg_color(randCountBtn, lv_color_hex(0x36393E), 0);
+            lv_obj_set_style_bg_color(randCountBtn, COL_CONTROL_FACE, 0);
             lv_obj_t* cym = uiCymbalIcon(randCountBtn, COL_TEXT);
             if (cym != nullptr) lv_obj_center(cym);
             uiAttachTooltip(randCountBtn,
