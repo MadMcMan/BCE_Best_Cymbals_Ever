@@ -45,7 +45,7 @@ struct UIMsegEditor {
     static lv_obj_t* create(lv_obj_t* parent, AbstractCymbalsUI* ui, UIStyles& /*styles*/) {
         // Ownership: parent (LVGL)
         lv_obj_t* obj = lv_obj_create(parent);
-        lv_obj_set_size(obj, 275, 120);
+        lv_obj_set_size(obj, scaled(275), scaled(120));
         lv_obj_set_style_bg_color(obj, COL_PANEL_DARK, 0);
         lv_obj_set_style_bg_opa(obj, 200, 0);
         lv_obj_set_style_border_color(obj, COL_ACCENT, 0);

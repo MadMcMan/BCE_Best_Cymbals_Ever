@@ -270,6 +270,15 @@ struct UIEQEditor {
         AbstractCymbalsUI* ui;
         int baseParam; // kParamEQ1Freq or kParamFinalEQ1Freq
         int selectedBand = -1;
+        uint8_t selectedBands = 0; // bitmask: ctrl-free marquee/group selection
+        bool marqueeActive = false;
+        lv_point_t marqueeStart{0, 0};
+        lv_point_t marqueeCurrent{0, 0};
+        bool groupDragActive = false;
+        lv_point_t groupDragStart{0, 0};
+        float groupStartFreq[5] = {0, 0, 0, 0, 0};
+        float groupStartGain[5] = {0, 0, 0, 0, 0};
+        float groupStartQ[5] = {0, 0, 0, 0, 0};
         int tiltAmountParam = -1;
         int tiltPivotParam = -1;
         // Mod-target registration: widgets[] entries for the selected band's
@@ -334,10 +343,29 @@ struct UIEQEditor {
         float plotBottomDb = -24.0f;
         ClassicQGestureState qGesture;
         bool poleGestureActive = false;
-        bool freqGestureActive = false;
-        bool gainGestureActive = false;
-        bool satGestureActive = false;
+        uint8_t freqGestureBands = 0;
+        uint8_t gainGestureBands = 0;
+        uint8_t satGestureBands = 0;
+        uint8_t qGestureBands = 0;
     };
+
+    enum BandParamKind {
+        kBandFreq = 0,
+        kBandGain = 1,
+        kBandQ = 2,
+        kBandSat = 3
+    };
+
+    static int bandParamForKind(int baseParam, int band, BandParamKind kind) {
+        if (band < 0 || band > 4) return -1;
+        switch (kind) {
+        case kBandFreq: return baseParam + band * 4;
+        case kBandGain: return baseParam + band * 4 + 1;
+        case kBandQ:    return baseParam + band * 4 + 2;
+        case kBandSat:  return satParamForBand(baseParam, band);
+        }
+        return -1;
+    }
 
     static int snapTypeToValid(int filterType, int model) {
         const uint32_t mask = UnifiedFilter::supportedTypesMask(model);
@@ -501,6 +529,7 @@ struct UIEQEditor {
         state->canvas = canvas;
         state->freqAxis = freqAxis;
         state->settingsPanel = settings;
+        activeEditors()[baseParam] = state;
         lv_obj_add_event_cb(settings, outside_press_cb, LV_EVENT_PRESSED, state);
         lv_obj_add_event_cb(freqAxis, [](lv_event_t* e) {
             State* s = (State*)lv_event_get_user_data(e);
@@ -538,6 +567,9 @@ struct UIEQEditor {
                     }
                 }
                 if (s->redrawTimer) lv_timer_delete(s->redrawTimer);
+                auto it = activeEditors().find(s->baseParam);
+                if (it != activeEditors().end() && it->second == s)
+                    activeEditors().erase(it);
                 delete s;
             }
         }, LV_EVENT_DELETE, state);
@@ -997,6 +1029,81 @@ struct UIEQEditor {
         update_settings_ui(state);
     }
 
+    static bool isBandSelected(const State* state, int band) {
+        return state != nullptr && band >= 0 && band < 5 &&
+               ((state->selectedBands >> band) & 1u) != 0;
+    }
+
+    static void clearBandSelection(State* state) {
+        if (!state) return;
+        state->selectedBands = 0;
+        state->selectedBand = -1;
+    }
+
+    static void selectOnlyBand(State* state, int band) {
+        if (!state || band < 0 || band > 4) return;
+        state->selectedBands = (uint8_t)(1u << band);
+        state->selectedBand = band;
+    }
+
+    static void setParamOneShot(State* state, int param, float value) {
+        if (!state || !state->ui || param < 0) return;
+        state->ui->editParameter((uint32_t)param, true);
+        state->ui->setParamValue((uint32_t)param, value);
+        state->ui->editParameter((uint32_t)param, false);
+        state->ui->updateParamLabel((uint32_t)param);
+    }
+
+    static void writeSelectedBandParam(State* state, BandParamKind kind, float value,
+                                       bool fromUserGesture) {
+        if (!state || !state->ui) return;
+        for (int i = 0; i < 5; ++i) {
+            if (!isBandSelected(state, i)) continue;
+            if (i != state->selectedBand && !fromUserGesture) continue;
+            const int p = bandParamForKind(state->baseParam, i, kind);
+            if (p < 0) continue;
+            state->ui->setParamValue((uint32_t)p, value);
+            state->ui->updateParamLabel((uint32_t)p);
+        }
+    }
+
+    static std::unordered_map<int, State*>& activeEditors() {
+        static std::unordered_map<int, State*> s;
+        return s;
+    }
+
+    // Mapping used by CymbalsUI when a modulation route is created: if the
+    // target is a selected band's freq/gain/Q/sat control and several bands
+    // are selected, return the corresponding parameter for every selected
+    // band so the same source/depth can be routed to all of them.
+    static int selectedModulationTargets(uint32_t target, uint32_t* out, int maxCount) {
+        if (!out || maxCount <= 0) return 0;
+        for (auto& kv : activeEditors()) {
+            State* st = kv.second;
+            if (!st) continue;
+            const int base = st->baseParam;
+            for (int band = 0; band < 5; ++band) {
+                int kind = -1;
+                for (int k = kBandFreq; k <= kBandSat; ++k) {
+                    if (target == (uint32_t)bandParamForKind(base, band, (BandParamKind)k)) {
+                        kind = k;
+                        break;
+                    }
+                }
+                if (kind < 0 || !isBandSelected(st, band)) continue;
+
+                int count = 0;
+                for (int i = 0; i < 5 && count < maxCount; ++i) {
+                    if (!isBandSelected(st, i)) continue;
+                    const int p = bandParamForKind(base, i, (BandParamKind)kind);
+                    if (p >= 0) out[count++] = (uint32_t)p;
+                }
+                return count;
+            }
+        }
+        return 0;
+    }
+
     // Numbered band strip under Mix: mirrors the filter bank's per-stage
     // buttons and selects the same band the node hit-test does.
     static void syncBandButtons(State* state) {
@@ -1004,7 +1111,7 @@ struct UIEQEditor {
         for (int i = 0; i < 5; ++i) {
             lv_obj_t* b = state->bandButtons[i];
             if (!b) continue;
-            if (state->selectedBand == i) lv_obj_add_state(b, LV_STATE_CHECKED);
+            if (isBandSelected(state, i)) lv_obj_add_state(b, LV_STATE_CHECKED);
             else                          lv_obj_clear_state(b, LV_STATE_CHECKED);
         }
     }
@@ -1030,11 +1137,36 @@ struct UIEQEditor {
         lv_obj_set_style_pad_left(state->bandRow, left, 0);
     }
 
+    static void nodeCenter(const State* state, int band, int w, int plotTop, int plotBottom,
+                           int& px, int& py) {
+        px = 0;
+        py = plotTop;
+        if (!state || !state->ui || band < 0 || band > 4 || w <= 0) return;
+        const float fxLive = UIEQEditor::uiLiveValue(state->ui, (uint32_t)(state->baseParam + band * 4));
+        px = (int)(fxLive * w);
+        const int tfp = filterTypeParamForBand(state->baseParam, band);
+        const float typeRaw = (tfp >= 0) ? state->ui->getParamValue(tfp) : 0.0f;
+        const int typeIdx = std::clamp((int)std::round(typeRaw), 0, 7);
+        const bool gainRelevant = (typeIdx >= 4 && typeIdx <= 6);
+        const bool qRelevant = (typeIdx <= 3 || typeIdx == 7);
+        if (gainRelevant) {
+            const float fy = 1.0f - UIEQEditor::uiLiveValue(state->ui, (uint32_t)(state->baseParam + band * 4 + 1));
+            py = plotTop + (int)(fy * (plotBottom - plotTop));
+        } else if (qRelevant) {
+            const float fy = 1.0f - UIEQEditor::uiLiveValue(state->ui, (uint32_t)(state->baseParam + band * 4 + 2));
+            py = plotTop + (int)(fy * (plotBottom - plotTop));
+        } else {
+            py = plotTop + (plotBottom - plotTop) / 2;
+        }
+    }
+
     static void selectBand(State* state, int band) {
         if (!state || band < 0 || band > 4) return;
         finalize_classic_q_gesture(state, true);
         finalize_cut_arc_gestures(state);
-        state->selectedBand = band;
+        selectOnlyBand(state, band);
+        state->marqueeActive = false;
+        state->groupDragActive = false;
         const float currentQ = state->ui->getParamValue(state->baseParam + band * 4 + 2);
         state->qSmoothTarget = currentQ;
         state->qSmoothCurrent = currentQ;
@@ -1263,7 +1395,9 @@ private:
         if (!state) return;
         finalize_classic_q_gesture(state, true);
         finalize_cut_arc_gestures(state);
-        state->selectedBand = -1;
+        clearBandSelection(state);
+        state->marqueeActive = false;
+        state->groupDragActive = false;
         syncBandButtons(state);
         if (state->settingsPanel) lv_obj_add_flag(state->settingsPanel, LV_OBJ_FLAG_HIDDEN);
         if (state->canvas) lv_obj_invalidate(state->canvas);
@@ -1418,6 +1552,12 @@ private:
         if (qIdx >= 0 && endClassicQGesture(state->qGesture, -1)) {
             state->ui->editParameter((uint32_t)qIdx, false);
         }
+        for (int i = 0; i < 5; ++i) {
+            if (((state->qGestureBands >> i) & 1u) == 0) continue;
+            const int p = qParamForBand(state->baseParam, i);
+            if (p >= 0) state->ui->editParameter((uint32_t)p, false);
+        }
+        state->qGestureBands = 0;
     }
 
     static void q_arc_finalize_cb(lv_event_t* e) {
@@ -1437,19 +1577,25 @@ private:
         const lv_event_code_t code = lv_event_get_code(e);
         lv_obj_t* target = (lv_obj_t*)lv_event_get_target(e);
         if ((code == LV_EVENT_RELEASED || code == LV_EVENT_PRESS_LOST) && state->selectedBand >= 0) {
-            const int sb = state->selectedBand;
-            if (target == state->freqArc && state->freqGestureActive) {
-                state->ui->editParameter(state->baseParam + sb * 4, false);
-                state->freqGestureActive = false;
+            if (target == state->freqArc && state->freqGestureBands != 0) {
+                for (int i = 0; i < 5; ++i)
+                    if ((state->freqGestureBands >> i) & 1u)
+                        state->ui->editParameter((uint32_t)(state->baseParam + i * 4), false);
+                state->freqGestureBands = 0;
             }
-            if (target == state->gainArc && state->gainGestureActive) {
-                state->ui->editParameter(state->baseParam + sb * 4 + 1, false);
-                state->gainGestureActive = false;
+            if (target == state->gainArc && state->gainGestureBands != 0) {
+                for (int i = 0; i < 5; ++i)
+                    if ((state->gainGestureBands >> i) & 1u)
+                        state->ui->editParameter((uint32_t)(state->baseParam + i * 4 + 1), false);
+                state->gainGestureBands = 0;
             }
-            if (target == state->satArc && state->satGestureActive) {
-                const int satP = satParamForBand(state->baseParam, sb);
-                if (satP >= 0) state->ui->editParameter((uint32_t)satP, false);
-                state->satGestureActive = false;
+            if (target == state->satArc && state->satGestureBands != 0) {
+                for (int i = 0; i < 5; ++i) {
+                    if (((state->satGestureBands >> i) & 1u) == 0) continue;
+                    const int satP = satParamForBand(state->baseParam, i);
+                    if (satP >= 0) state->ui->editParameter((uint32_t)satP, false);
+                }
+                state->satGestureBands = 0;
             }
         }
     }
@@ -1476,119 +1622,171 @@ private:
             // Indev points are raw window pixels; the canvas is scaled by the
             // ancestor fit transform, so map back into unscaled local coords.
             const lv_point_t lp = uiObjLocalPoint(obj, p);
-            int lx = lp.x, ly = lp.y;
 
-            int w = lv_obj_get_width(obj), h = lv_obj_get_height(obj);
-
+            const int w = lv_obj_get_width(obj), h = lv_obj_get_height(obj);
             const int plotTop = 16;
             const int plotBottom = std::max(plotTop + 20, h - 24);
-            const int yZero = plotTop + (int)((0.5f) * (plotBottom - plotTop));
             int hit = -1;
-            for(int i=0; i<5; ++i) {
-                const float fxLive = UIEQEditor::uiLiveValue(state->ui, (uint32_t)(state->baseParam + i * 4));
-                int px = (int)(fxLive * w);
-                int py;
-                const int tfp = filterTypeParamForBand(state->baseParam, i);
-                float typeRaw = (tfp >= 0) ? state->ui->getParamValue(tfp) : 0.0f;
-                int typeIdx = std::clamp((int)std::round(typeRaw), 0, 7);
-                bool gainRelevant = (typeIdx >= 4 && typeIdx <= 6);
-                bool qRelevant = (typeIdx <= 3 || typeIdx == 7);
-                if (gainRelevant) {
-                    float fy = 1.0f - UIEQEditor::uiLiveValue(state->ui, (uint32_t)(state->baseParam + i*4 + 1));
-                    py = plotTop + (int)(fy * (plotBottom - plotTop));
-                } else if (qRelevant) {
-                    float fy = 1.0f - UIEQEditor::uiLiveValue(state->ui, (uint32_t)(state->baseParam + i*4 + 2));
-                    py = plotTop + (int)(fy * (plotBottom - plotTop));
-                } else {
-                    py = yZero;
-                }
-                if (std::abs(lx - px) < 25 && std::abs(ly - py) < 25) { hit = i; break; }
+            for (int i = 0; i < 5; ++i) {
+                int px = 0, py = 0;
+                nodeCenter(state, i, w, plotTop, plotBottom, px, py);
+                if (std::abs(lp.x - px) < 25 && std::abs(lp.y - py) < 25) { hit = i; break; }
             }
 
             finalize_classic_q_gesture(state, true);
             finalize_cut_arc_gestures(state);
-            state->selectedBand = hit;
-            syncBandButtons(state);
+            state->marqueeActive = false;
+            state->groupDragActive = false;
+
             if (hit != -1) {
-                // Initialize smoothing state for EQ bands
+                if (!isBandSelected(state, hit)) selectOnlyBand(state, hit);
+                else                             state->selectedBand = hit;
+                state->groupDragActive = true;
+                state->groupDragStart = lp;
                 {
-                    const int qIdx = state->baseParam + hit*4 + 2;
+                    const int qIdx = state->baseParam + hit * 4 + 2;
                     const float currentQ = state->ui->getParamValue(qIdx);
                     state->qSmoothTarget = currentQ;
                     state->qSmoothCurrent = currentQ;
                 }
-                state->ui->editParameter(state->baseParam + hit*4, true);
-                {
-                    const int tfp = filterTypeParamForBand(state->baseParam, hit);
-                    float typeRaw = (tfp >= 0) ? state->ui->getParamValue(tfp) : 0.0f;
-                    int typeIdx = std::clamp((int)std::round(typeRaw), 0, 7);
+                for (int i = 0; i < 5; ++i) {
+                    if (!isBandSelected(state, i)) continue;
+                    state->groupStartFreq[i] = state->ui->getParamValue((uint32_t)(state->baseParam + i * 4));
+                    state->groupStartGain[i] = state->ui->getParamValue((uint32_t)(state->baseParam + i * 4 + 1));
+                    state->groupStartQ[i] = state->ui->getParamValue((uint32_t)(state->baseParam + i * 4 + 2));
+                    state->ui->editParameter((uint32_t)(state->baseParam + i * 4), true);
+                    const int tfp = filterTypeParamForBand(state->baseParam, i);
+                    const float typeRaw = (tfp >= 0) ? state->ui->getParamValue(tfp) : 0.0f;
+                    const int typeIdx = std::clamp((int)std::round(typeRaw), 0, 7);
                     if (typeIdx >= 4 && typeIdx <= 6)
-                        state->ui->editParameter(state->baseParam + hit*4 + 1, true);
+                        state->ui->editParameter((uint32_t)(state->baseParam + i * 4 + 1), true);
                 }
                 lv_obj_remove_flag(state->settingsPanel, LV_OBJ_FLAG_HIDDEN);
-            }
-            else {
+            } else {
+                state->marqueeActive = true;
+                state->marqueeStart = lp;
+                state->marqueeCurrent = lp;
+                clearBandSelection(state);
                 lv_obj_add_flag(state->settingsPanel, LV_OBJ_FLAG_HIDDEN);
             }
+            syncBandButtons(state);
             lv_obj_invalidate(obj);
         }
-        else if ((code == LV_EVENT_RELEASED || code == LV_EVENT_PRESS_LOST) && state->selectedBand != -1) {
-            // Signal gesture end for the released band's parameters
-            int band = state->selectedBand;
-            if (band >= 0) {
-                state->ui->editParameter(state->baseParam + band*4, false);
-                state->ui->editParameter(state->baseParam + band*4 + 1, false);
-                finalize_classic_q_gesture(state, true);
-            }
-            if (code == LV_EVENT_PRESS_LOST) {
-                state->selectedBand = -1;
+        else if (code == LV_EVENT_RELEASED || code == LV_EVENT_PRESS_LOST) {
+            if (state->marqueeActive) {
+                const int x1 = std::min(state->marqueeStart.x, state->marqueeCurrent.x);
+                const int x2 = std::max(state->marqueeStart.x, state->marqueeCurrent.x);
+                const int y1 = std::min(state->marqueeStart.y, state->marqueeCurrent.y);
+                const int y2 = std::max(state->marqueeStart.y, state->marqueeCurrent.y);
+                uint8_t mask = 0;
+                int primary = -1;
+                const int w = lv_obj_get_width(obj), h = lv_obj_get_height(obj);
+                const int plotTop = 16;
+                const int plotBottom = std::max(plotTop + 20, h - 24);
+                for (int i = 0; i < 5; ++i) {
+                    int px = 0, py = 0;
+                    nodeCenter(state, i, w, plotTop, plotBottom, px, py);
+                    if (px >= x1 && px <= x2 && py >= y1 && py <= y2) {
+                        mask |= (uint8_t)(1u << i);
+                        primary = i;
+                    }
+                }
+                state->marqueeActive = false;
+                state->selectedBands = mask;
+                state->selectedBand = primary;
+                if (primary >= 0) {
+                    const float q = state->ui->getParamValue((uint32_t)(state->baseParam + primary * 4 + 2));
+                    state->qSmoothTarget = q;
+                    state->qSmoothCurrent = q;
+                    lv_obj_remove_flag(state->settingsPanel, LV_OBJ_FLAG_HIDDEN);
+                    update_settings_ui(state);
+                    update_settings_width(state);
+                } else {
+                    lv_obj_add_flag(state->settingsPanel, LV_OBJ_FLAG_HIDDEN);
+                }
                 syncBandButtons(state);
+                lv_obj_invalidate(obj);
+                lv_event_stop_bubbling(e);
+                return;
             }
+
+            if (state->groupDragActive) {
+                for (int i = 0; i < 5; ++i) {
+                    if (!isBandSelected(state, i)) continue;
+                    state->ui->editParameter((uint32_t)(state->baseParam + i * 4), false);
+                    const int tfp = filterTypeParamForBand(state->baseParam, i);
+                    const float typeRaw = (tfp >= 0) ? state->ui->getParamValue(tfp) : 0.0f;
+                    const int typeIdx = std::clamp((int)std::round(typeRaw), 0, 7);
+                    if (typeIdx >= 4 && typeIdx <= 6)
+                        state->ui->editParameter((uint32_t)(state->baseParam + i * 4 + 1), false);
+                }
+                state->groupDragActive = false;
+            }
+            finalize_classic_q_gesture(state, true);
+            lv_event_stop_bubbling(e);
         }
-        else if (code == LV_EVENT_PRESSING && state->selectedBand != -1) {
+        else if (code == LV_EVENT_PRESSING) {
             // Everything below runs PER POINTER MOVE, so every arc write here
             // (and in update_settings_ui, which this calls) uses the INSTANT
             // setter. The animated one restarts a 200ms sweep on each move, so
             // dragging a band would make the freq/gain/Q knobs trail the
             // cursor and never settle. Animate only discrete jumps (preset
             // load, host sync) - never a streaming gesture.
+            if (state->marqueeActive) {
+                lv_event_stop_bubbling(e);
+                lv_indev_t* indev = lv_indev_get_act();
+                lv_point_t p; lv_indev_get_point(indev, &p);
+                state->marqueeCurrent = uiObjLocalPoint(obj, p);
+                lv_obj_invalidate(obj);
+                return;
+            }
+            if (!state->groupDragActive || state->selectedBands == 0) return;
+
             lv_event_stop_bubbling(e);
             lv_indev_t* indev = lv_indev_get_act();
             lv_point_t p; lv_indev_get_point(indev, &p);
             const lv_point_t lp = uiObjLocalPoint(obj, p);
-            float fx = std::clamp((float)lp.x / lv_obj_get_width(obj), 0.0f, 1.0f);
-            float fy = std::clamp(1.0f - (float)lp.y / lv_obj_get_height(obj), 0.0f, 1.0f);
-            if (state->selectedBand >= 0 && state->selectedBand < 5) {
-                const int sb = state->selectedBand;
-                const int tfp = filterTypeParamForBand(state->baseParam, sb);
-                float typeRaw = (tfp >= 0) ? state->ui->getParamValue(tfp) : 0.0f;
-                int typeIdx = std::clamp((int)std::round(typeRaw), 0, 7);
-                bool gainRelevant = (typeIdx >= 4 && typeIdx <= 6);
-                bool qRelevant = (typeIdx <= 3 || typeIdx == 7);
-                // Keep Q smoothing synced to actual Q value during any drag
-                {
-                    const float actualQ = state->ui->getParamValue(state->baseParam + state->selectedBand*4 + 2);
-                    state->qSmoothTarget = actualQ;
-                    state->qSmoothCurrent = actualQ;
-                }
-                state->ui->setParamValue(state->baseParam + state->selectedBand*4, fx);
-                state->ui->updateParamLabel(state->baseParam + state->selectedBand*4);
-                if (state->freqArc)
-                    UIWidgets::setArcValueInstant(state->freqArc, (int)(fx * 1000.0f));
+            const int w = lv_obj_get_width(obj), h = lv_obj_get_height(obj);
+            if (w <= 0 || h <= 0) return;
+            const int plotTop = 16;
+            const int plotBottom = std::max(plotTop + 20, h - 24);
+            const float plotH = (float)std::max(1, plotBottom - plotTop);
+            const float dx = (float)(lp.x - state->groupDragStart.x) / (float)w;
+            const float dy = (float)(state->groupDragStart.y - lp.y) / plotH;
+
+            for (int i = 0; i < 5; ++i) {
+                if (!isBandSelected(state, i)) continue;
+                const int freqP = state->baseParam + i * 4;
+                const float freq = std::clamp(state->groupStartFreq[i] + dx, 0.0f, 1.0f);
+                state->ui->setParamValue((uint32_t)freqP, freq);
+                state->ui->updateParamLabel((uint32_t)freqP);
+                if (i == state->selectedBand && state->freqArc)
+                    UIWidgets::setArcValueInstant(state->freqArc, (int)(freq * 1000.0f));
+
+                const int tfp = filterTypeParamForBand(state->baseParam, i);
+                const float typeRaw = (tfp >= 0) ? state->ui->getParamValue(tfp) : 0.0f;
+                const int typeIdx = std::clamp((int)std::round(typeRaw), 0, 7);
+                const bool gainRelevant = (typeIdx >= 4 && typeIdx <= 6);
+                const bool qRelevant = (typeIdx <= 3 || typeIdx == 7);
                 if (gainRelevant) {
-                    state->ui->setParamValue(state->baseParam + state->selectedBand*4 + 1, fy);
-                    state->ui->updateParamLabel(state->baseParam + state->selectedBand*4 + 1);
-                    if (state->gainArc)
-                        UIWidgets::setArcValueInstant(state->gainArc, (int)(fy * 1000.0f));
+                    const float gain = std::clamp(state->groupStartGain[i] + dy, 0.0f, 1.0f);
+                    state->ui->setParamValue((uint32_t)(freqP + 1), gain);
+                    state->ui->updateParamLabel((uint32_t)(freqP + 1));
+                    if (i == state->selectedBand && state->gainArc)
+                        UIWidgets::setArcValueInstant(state->gainArc, (int)(gain * 1000.0f));
                 } else if (qRelevant) {
-                    state->ui->setParamValue(state->baseParam + state->selectedBand*4 + 2, fy);
-                    state->ui->updateParamLabel(state->baseParam + state->selectedBand*4 + 2);
-                    state->qSmoothTarget = fy;
-                    state->qSmoothCurrent = fy;
-                    if (state->qArc)
-                        UIWidgets::setArcValueInstant(state->qArc, (int)(fy * 1000.0f));
+                    const float q = std::clamp(state->groupStartQ[i] + dy, 0.0f, 1.0f);
+                    state->ui->setParamValue((uint32_t)(freqP + 2), q);
+                    state->ui->updateParamLabel((uint32_t)(freqP + 2));
+                    if (i == state->selectedBand) {
+                        state->qSmoothTarget = q;
+                        state->qSmoothCurrent = q;
+                        if (state->qArc)
+                            UIWidgets::setArcValueInstant(state->qArc, (int)(q * 1000.0f));
+                    }
                 }
             }
+
             // Keep every settings knob arc + value label in sync with the
             // dragged chart point (freq/gain/Q/sat values under the knobs).
             update_settings_ui(state);
@@ -1599,6 +1797,10 @@ private:
     static void settings_changed_cb(lv_event_t* e) {
         State* state = (State*)lv_event_get_user_data(e);
         if (!state || state->selectedBand == -1) return;
+        // parameterModulationChanged() calls syncParamWidget(base + mod),
+        // which sends VALUE_CHANGED while fInSync is set. Writing that value
+        // back here would move the base toward the modulated display value.
+        if (state->ui && state->ui->isInSync()) return;
 
         lv_obj_t* target = (lv_obj_t*)lv_event_get_target(e);
         // Host-driven writes (automation/preset load) reach this callback via
@@ -1621,59 +1823,68 @@ private:
                 snprintf(buf, sizeof(buf), "Q %.2f", DSPUtils::qFromParam(qNorm));
                 lv_label_set_text(state->qValueLabel, buf);
             }
-            if (fromUserGesture) begin_classic_q_gesture(state, qP);
+            if (fromUserGesture && !state->qGesture.active) {
+                for (int i = 0; i < 5; ++i) {
+                    if (i == sb || !isBandSelected(state, i)) continue;
+                    const int p = bandParamForKind(state->baseParam, i, kBandQ);
+                    if (p >= 0) state->ui->editParameter((uint32_t)p, true);
+                }
+                state->qGestureBands = (uint8_t)(state->selectedBands & ~(1u << sb));
+                begin_classic_q_gesture(state, qP);
+            }
+            writeSelectedBandParam(state, kBandQ, qNorm, fromUserGesture);
         } else if (target == state->freqArc) {
-            const int freqP = state->baseParam + sb * 4;
-            if (freqP >= 0) {
-                const float freqNorm = (float)lv_arc_get_value(state->freqArc) / 1000.0f;
-                if (fromUserGesture && !state->freqGestureActive) {
-                    state->ui->editParameter(freqP, true);
-                    state->freqGestureActive = true;
+            const float freqNorm = (float)lv_arc_get_value(state->freqArc) / 1000.0f;
+            if (fromUserGesture && state->freqGestureBands == 0) {
+                for (int i = 0; i < 5; ++i) {
+                    if (!isBandSelected(state, i)) continue;
+                    const int p = bandParamForKind(state->baseParam, i, kBandFreq);
+                    if (p >= 0) state->ui->editParameter((uint32_t)p, true);
                 }
-                state->ui->setParamValue(freqP, freqNorm);
-                state->ui->updateParamLabel(freqP);
-                if (state->freqValueLabel) {
-                    const float freqHz = DSPUtils::normToHz( freqNorm);
-                    char buf[16];
-                    if (freqHz >= 1000.0f)
-                        snprintf(buf, sizeof(buf), "%.2f kHz", freqHz / 1000.0f);
-                    else
-                        snprintf(buf, sizeof(buf), "%.0f Hz", freqHz);
-                    lv_label_set_text(state->freqValueLabel, buf);
-                }
+                state->freqGestureBands = state->selectedBands;
+            }
+            writeSelectedBandParam(state, kBandFreq, freqNorm, fromUserGesture);
+            if (state->freqValueLabel) {
+                const float freqHz = DSPUtils::normToHz(freqNorm);
+                char buf[16];
+                if (freqHz >= 1000.0f)
+                    snprintf(buf, sizeof(buf), "%.2f kHz", freqHz / 1000.0f);
+                else
+                    snprintf(buf, sizeof(buf), "%.0f Hz", freqHz);
+                lv_label_set_text(state->freqValueLabel, buf);
             }
         } else if (target == state->gainArc) {
-            const int gainP = state->baseParam + sb * 4 + 1;
-            if (gainP >= 0) {
-                const float gainNorm = (float)lv_arc_get_value(state->gainArc) / 1000.0f;
-                if (fromUserGesture && !state->gainGestureActive) {
-                    state->ui->editParameter(gainP, true);
-                    state->gainGestureActive = true;
+            const float gainNorm = (float)lv_arc_get_value(state->gainArc) / 1000.0f;
+            if (fromUserGesture && state->gainGestureBands == 0) {
+                for (int i = 0; i < 5; ++i) {
+                    if (!isBandSelected(state, i)) continue;
+                    const int p = bandParamForKind(state->baseParam, i, kBandGain);
+                    if (p >= 0) state->ui->editParameter((uint32_t)p, true);
                 }
-                state->ui->setParamValue(gainP, gainNorm);
-                state->ui->updateParamLabel(gainP);
-                if (state->gainValueLabel) {
-                    const float gainDb = (gainNorm - 0.5f) * 48.0f;
-                    char buf[16];
-                    snprintf(buf, sizeof(buf), "%+.1f dB", gainDb);
-                    lv_label_set_text(state->gainValueLabel, buf);
-                }
+                state->gainGestureBands = state->selectedBands;
+            }
+            writeSelectedBandParam(state, kBandGain, gainNorm, fromUserGesture);
+            if (state->gainValueLabel) {
+                const float gainDb = (gainNorm - 0.5f) * 48.0f;
+                char buf[16];
+                snprintf(buf, sizeof(buf), "%+.1f dB", gainDb);
+                lv_label_set_text(state->gainValueLabel, buf);
             }
         } else if (target == state->satArc) {
-            const int satP = satParamForBand(state->baseParam, sb);
-            if (satP >= 0) {
-                const float satNorm = (float)lv_arc_get_value(state->satArc) / 1000.0f;
-                if (fromUserGesture && !state->satGestureActive) {
-                    state->ui->editParameter(satP, true);
-                    state->satGestureActive = true;
+            const float satNorm = (float)lv_arc_get_value(state->satArc) / 1000.0f;
+            if (fromUserGesture && state->satGestureBands == 0) {
+                for (int i = 0; i < 5; ++i) {
+                    if (!isBandSelected(state, i)) continue;
+                    const int p = bandParamForKind(state->baseParam, i, kBandSat);
+                    if (p >= 0) state->ui->editParameter((uint32_t)p, true);
                 }
-                state->ui->setParamValue(satP, satNorm);
-                state->ui->updateParamLabel(satP);
-                if (state->satValueLabel) {
-                    char buf[16];
-                    snprintf(buf, sizeof(buf), "Sat %.0f%%", satNorm * 100.0f);
-                    lv_label_set_text(state->satValueLabel, buf);
-                }
+                state->satGestureBands = state->selectedBands;
+            }
+            writeSelectedBandParam(state, kBandSat, satNorm, fromUserGesture);
+            if (state->satValueLabel) {
+                char buf[16];
+                snprintf(buf, sizeof(buf), "Sat %.0f%%", satNorm * 100.0f);
+                lv_label_set_text(state->satValueLabel, buf);
             }
         } else if (target == state->typeArc && filterTypeP >= 0) {
             const int arcVal = lv_arc_get_value(state->typeArc);
@@ -1682,34 +1893,36 @@ private:
             const int snappedArc = typeToArcValue(snapped, modelForType);
             if (snappedArc != arcVal)
                 UIWidgets::setArcValueInstant(state->typeArc, snappedArc);
-            state->ui->editParameter(filterTypeP, true);
-            state->ui->setParamValue(filterTypeP, (float)snapped);
-            state->ui->editParameter(filterTypeP, false);
-            state->ui->updateParamLabel(filterTypeP);
+
+            for (int i = 0; i < 5; ++i) {
+                if (!isBandSelected(state, i)) continue;
+                if (i != sb && !fromUserGesture) continue;
+                const int tp = filterTypeParamForBand(state->baseParam, i);
+                if (tp < 0) continue;
+                const int mp = modelParamForBand(state->baseParam, i);
+                const int model = (mp >= 0)
+                    ? std::clamp((int)std::round(state->ui->getParamValue(mp)), 0, (int)UnifiedFilter::Count - 1)
+                    : 0;
+                const int type = arcValueToType(arcVal, model);
+                setParamOneShot(state, tp, (float)type);
+                if (!(type >= 4 && type <= 6))
+                    setParamOneShot(state, state->baseParam + i * 4 + 1, 0.5f);
+            }
             update_settings_ui(state);
             if (state->canvas) lv_obj_invalidate(state->canvas);
-            const bool showGain = (snapped >= 4 && snapped <= 6);
-            if (!showGain) {
-                const int gainParam = state->baseParam + sb * 4 + 1;
-                if (gainParam >= 0) {
-                    state->ui->editParameter(gainParam, true);
-                    state->ui->setParamValue(gainParam, 0.5f);
-                    state->ui->editParameter(gainParam, false);
-                }
-            }
         } else if (state->charDropdown && target == state->charDropdown && modelP >= 0) {
             const int newModel = modelDropdownToValue(lv_dropdown_get_selected(state->charDropdown));
-            state->ui->editParameter(modelP, true);
-            state->ui->setParamValue(modelP, (float)newModel);
-            state->ui->editParameter(modelP, false);
-            state->ui->updateParamLabel(modelP);
-            if (filterTypeP >= 0) {
-                const int curType = std::clamp((int)std::round(state->ui->getParamValue(filterTypeP)), 0, 7);
-                const int snapped = snapTypeToValid(curType, newModel);
-                if (snapped != curType) {
-                    state->ui->editParameter(filterTypeP, true);
-                    state->ui->setParamValue(filterTypeP, (float)snapped);
-                    state->ui->editParameter(filterTypeP, false);
+            for (int i = 0; i < 5; ++i) {
+                if (!isBandSelected(state, i)) continue;
+                const int mp = modelParamForBand(state->baseParam, i);
+                const int tp = filterTypeParamForBand(state->baseParam, i);
+                if (mp < 0) continue;
+                setParamOneShot(state, mp, (float)newModel);
+                if (tp >= 0) {
+                    const int curType = std::clamp((int)std::round(state->ui->getParamValue(tp)), 0, 7);
+                    const int snapped = snapTypeToValid(curType, newModel);
+                    if (snapped != curType)
+                        setParamOneShot(state, tp, (float)snapped);
                 }
             }
             update_settings_ui(state);
@@ -1726,11 +1939,20 @@ private:
             update_cut_slope_label(state,
                 std::max(0, (int)std::round(state->ui->getParamValue(modelP)) - 1), poleMode);
         } else if (target == state->filterTypeDropdown && filterTypeP >= 0 && state->filterTypeDropdown) {
-            state->ui->editParameter(filterTypeP, true);
-            state->ui->setParamValue(filterTypeP, (float)lv_dropdown_get_selected(state->filterTypeDropdown));
-            state->ui->editParameter(filterTypeP, false);
-            state->ui->updateParamLabel(filterTypeP);
+            const int selection = (int)lv_dropdown_get_selected(state->filterTypeDropdown);
+            for (int i = 0; i < 5; ++i) {
+                if (!isBandSelected(state, i)) continue;
+                const int tp = filterTypeParamForBand(state->baseParam, i);
+                if (tp < 0) continue;
+                const int mp = modelParamForBand(state->baseParam, i);
+                const int model = (mp >= 0)
+                    ? std::clamp((int)std::round(state->ui->getParamValue(mp)), 0, (int)UnifiedFilter::Count - 1)
+                    : 0;
+                const int type = snapTypeToValid(selection, model);
+                setParamOneShot(state, tp, (float)type);
+            }
             update_settings_ui(state);
+            if (state->canvas) lv_obj_invalidate(state->canvas);
         } else if (target == state->waspDriveArc) {
             const int driveParam = advancedDriveParamForBand(state->baseParam, sb);
             if (driveParam >= 0 && state->waspDriveArc) {
@@ -1966,7 +2188,7 @@ private:
 
         // Dark background overlay for stronger contrast against grid + curves
         lv_draw_rect_dsc_t bg_dsc; lv_draw_rect_dsc_init(&bg_dsc);
-        bg_dsc.bg_color = lv_color_hex(0x1A2228);
+        bg_dsc.bg_color = COL_EQ_PLOT_BG;
         bg_dsc.bg_opa = LV_OPA_COVER;
         lv_draw_rect(layer, &bg_dsc, &coords);
         const int plotTop = 16;
@@ -2090,7 +2312,6 @@ private:
             const float t = std::clamp((plotScale.topDb - db) / (plotScale.topDb - plotScale.bottomDb), 0.0f, 1.0f);
             return plotTop + (int)(t * (plotBottom - plotTop));
         };
-        const int yZero = y_from_db(0.0f);
         const int yFloor = y_from_db(plotScale.bottomDb);
 
         // Background grid: log-frequency verticals and dynamic dB horizontals.
@@ -2285,30 +2506,21 @@ private:
 
         // Draw Dots — all 5 nodes uniformly
         for(int i=0; i<5; ++i) {
-            const float fx = UIEQEditor::uiLiveValue(state->ui, (uint32_t)(state->baseParam + i * 4));
-            int px = (int)(fx * w);
-            int py;
+            int px = 0, py = 0;
+            nodeCenter(state, i, w, plotTop, plotBottom, px, py);
+            const float fx = (w > 0) ? (float)px / (float)w : 0.0f;
             const int tfp = filterTypeParamForBand(state->baseParam, i);
             float typeRaw = (tfp >= 0) ? state->ui->getParamValue(tfp) : 0.0f;
             int typeIdx = std::clamp((int)std::round(typeRaw), 0, 7);
             bool gainRelevant = (typeIdx >= 4 && typeIdx <= 6);
             bool qRelevant = (typeIdx <= 3 || typeIdx == 7);
-if (gainRelevant) {
-                    float fy = 1.0f - UIEQEditor::uiLiveValue(state->ui, (uint32_t)(state->baseParam + i*4 + 1));
-                    py = plotTop + (int)(fy * (plotBottom - plotTop));
-                } else if (qRelevant) {
-                    float fy = 1.0f - UIEQEditor::uiLiveValue(state->ui, (uint32_t)(state->baseParam + i*4 + 2));
-                    py = plotTop + (int)(fy * (plotBottom - plotTop));
-                } else {
-                    py = yZero;
-                }
 
             const bool off = bandOff[i];
             lv_draw_rect_dsc_t rect_dsc; lv_draw_rect_dsc_init(&rect_dsc);
             rect_dsc.radius = LV_RADIUS_CIRCLE;
             rect_dsc.bg_color = off ? COL_BORDER : bandColor[i];
             rect_dsc.bg_opa = off ? LV_OPA_60
-                                  : ((state->selectedBand == i) ? LV_OPA_COVER : LV_OPA_90);
+                                  : (isBandSelected(state, i) ? LV_OPA_COVER : LV_OPA_90);
             // Thin/dim rim: the white TYPE GLYPH is the icon now, so a fat
             // white ring competed with it (the glyph read as a smudge).
             rect_dsc.border_width = 1;
@@ -2325,6 +2537,19 @@ if (gainRelevant) {
             int nodeRadius = (int)(std::max(7, std::min(20, h / 25)) * (1.0f + satVal * 0.6f));
             lv_area_t dot_area = {coords.x1 + px - nodeRadius, coords.y1 + py - nodeRadius, coords.x1 + px + nodeRadius, coords.y1 + py + nodeRadius};
             lv_draw_rect(layer, &rect_dsc, &dot_area);
+
+            if (isBandSelected(state, i)) {
+                lv_draw_rect_dsc_t outline;
+                lv_draw_rect_dsc_init(&outline);
+                outline.bg_opa = LV_OPA_TRANSP;
+                outline.border_color = COL_HIGHLIGHT;
+                outline.border_width = 2;
+                outline.border_opa = LV_OPA_COVER;
+                outline.radius = LV_RADIUS_CIRCLE;
+                lv_area_t ring_area = {dot_area.x1 - 3, dot_area.y1 - 3,
+                                       dot_area.x2 + 3, dot_area.y2 + 3};
+                lv_draw_rect(layer, &outline, &ring_area);
+            }
 
             // Filter-TYPE glyph inside the node. The handle used to be a
             // generic diamond; the node now shows what the band actually does,
@@ -2431,6 +2656,24 @@ if (gainRelevant) {
                 lv_draw_rect(layer, &chip2, &ta2);
                 lv_area_t ta2_lbl = {tx2, ty2, tx2 + sz2.x + 2, ty2 + sz2.y + 2};
                 lv_draw_label(layer, &lbl, &ta2_lbl);
+            }
+        }
+
+        if (state->marqueeActive) {
+            const int x1 = coords.x1 + std::min(state->marqueeStart.x, state->marqueeCurrent.x);
+            const int x2 = coords.x1 + std::max(state->marqueeStart.x, state->marqueeCurrent.x);
+            const int y1 = coords.y1 + std::min(state->marqueeStart.y, state->marqueeCurrent.y);
+            const int y2 = coords.y1 + std::max(state->marqueeStart.y, state->marqueeCurrent.y);
+            if (x2 > x1 && y2 > y1) {
+                lv_draw_rect_dsc_t marquee;
+                lv_draw_rect_dsc_init(&marquee);
+                marquee.bg_color = COL_HIGHLIGHT;
+                marquee.bg_opa = LV_OPA_20;
+                marquee.border_color = COL_HIGHLIGHT;
+                marquee.border_width = 1;
+                marquee.border_opa = LV_OPA_80;
+                lv_area_t box = {x1, y1, x2, y2};
+                lv_draw_rect(layer, &marquee, &box);
             }
         }
     }

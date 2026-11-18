@@ -10,13 +10,9 @@ inline constexpr int kUIFooterHeight = 84;
 inline lv_coord_t uiFooterHeight() { return scaled(kUIFooterHeight); }
 
 // ============================================================================
-// Plugin-local palette additions (shared cymbals-ui repo is read-only).
-// All lv_color_hex(...) definitions stay macros here, per repo convention.
+// Plugin-local UI helpers. Palette definitions live in
+// cymbals-ui/UICommon.hpp.
 // ============================================================================
-
-// XY-pad disabled comb rings: selected vs unselected.
-#define COL_RING_DISABLED      lv_color_hex(0x6F747B)
-#define COL_RING_DISABLED_DIM  lv_color_hex(0x4A4E54)
 
 // ============================================================================
 // USER RULE: nothing in this UI ever scrolls — not tabs, not lists, not even

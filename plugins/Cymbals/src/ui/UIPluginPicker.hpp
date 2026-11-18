@@ -198,7 +198,7 @@ struct UIPluginPicker {
         const lv_coord_t cy = area.y1 + scaled(12);
         lv_point_precise_t pts[11];
         starPoints(pts, cx, cy, scaled(9), scaled(4));
-        const lv_color_t gold = lv_color_hex(0xFFC24A);
+        const lv_color_t gold = COL_PICKER_GOLD;
 
         lv_draw_triangle_dsc_t d;
         lv_draw_triangle_dsc_init(&d);

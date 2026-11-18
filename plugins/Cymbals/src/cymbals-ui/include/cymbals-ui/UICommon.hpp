@@ -89,6 +89,11 @@ public:
     virtual bool modDragInProgress() const { return false; }
     // Matrix row containers, so syncParamWidget can toggle visibility on enable.
     virtual void setModRouteRow(int /*r*/, lv_obj_t* /*row*/) {}
+    // Panel-initiated route creation. The host UI owns EQ selection fan-out
+    // and can atomically refuse a group that does not fit the matrix.
+    virtual bool createModulationRoute(int /*source*/, int /*target*/, float /*amountNorm*/) {
+        return false;
+    }
     // Panel-initiated route changes (ADD ROUTE / remove / target picker). The
     // panel passes its own State so the UI can refresh the OTHER matrix surface
     // (the MOD stage vs the modal drawer) without rebuilding the changed one.
@@ -172,6 +177,28 @@ public:
 #define COL_ACCENT_DIM lv_color_hex(0x1A7491)  // dimmed azure = research mean engine-cyan
 #define COL_BORDER     lv_color_hex(0x505050)  // standard border (research chrome #505050)
 #define COL_CHECKED_BG lv_color_hex(0x0F87AF)  // checked button gradient accent
+
+// Shared control surfaces and derived materials
+#define COL_CONTROL_FACE  lv_color_hex(0x36393E)  // raised button/select face
+#define COL_CONTROL_HOVER lv_color_hex(0x43474D)  // hover lift on control faces
+#define COL_PANEL_RAISED  lv_color_hex(0x303236)  // plate top edge
+#define COL_PANEL_BASE    lv_color_hex(0x292B2E)  // plate base under the sheen
+#define COL_BUTTON_GRAD   lv_color_hex(0x2C2F33)  // button face gradient end
+#define COL_SELECT_GRAD   lv_color_hex(0x2E3135)  // compact select gradient end
+#define COL_KNOB_CAP_BG   lv_color_hex(0x4A4E54)  // knob cap/ring dim face
+#define COL_KNOB_CAP_GRAD lv_color_hex(0x33363B)  // knob cap gradient end
+
+// Display / keyboard / picker accents
+#define COL_EQ_PLOT_BG          lv_color_hex(0x1A2228)  // EQ graph background
+#define COL_KEYBOARD_TEXT_DARK  lv_color_hex(0x0E1116)  // white-key ink
+#define COL_KEYBOARD_BLACK_FACE lv_color_hex(0x2E3238)  // black-key face
+#define COL_KEYBOARD_BLACK_GRAD lv_color_hex(0x1C1F23)  // black-key gradient end
+#define COL_KEYBOARD_BLACK_BORDER lv_color_hex(0x3A3E44) // black-key top edge
+#define COL_PICKER_GOLD         lv_color_hex(0xFFC24A)  // plugin-picker favourite star
+
+// XY-pad disabled comb rings: selected vs unselected.
+#define COL_RING_DISABLED      lv_color_hex(0x6F747B)
+#define COL_RING_DISABLED_DIM  COL_KNOB_CAP_BG
 
 // Favourite dot colours (multi-coloured favourites; order matches kFavColours)
 #define COL_FAV_RED     lv_color_hex(0xE8574F)

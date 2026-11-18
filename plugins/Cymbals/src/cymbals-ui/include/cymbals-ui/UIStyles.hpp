@@ -108,8 +108,8 @@ struct UIStyles {
         // Panel style: layered plate — whisper of a raised top
         // edge over the plate base, dark seam border, soft drop shadow.
         lv_style_init(&panel);
-        lv_style_set_bg_color(&panel, lv_color_hex(0x303236));  // raised top edge
-        lv_style_set_bg_grad_color(&panel, lv_color_hex(0x292B2E));  // plate base
+        lv_style_set_bg_color(&panel, COL_PANEL_RAISED);  // raised top edge
+        lv_style_set_bg_grad_color(&panel, COL_PANEL_BASE);  // plate base
         lv_style_set_bg_grad_dir(&panel, LV_GRAD_DIR_VER);
         lv_style_set_bg_opa(&panel, LV_OPA_COVER);
         lv_style_set_border_color(&panel, COL_HAIRLINE);
@@ -174,8 +174,8 @@ struct UIStyles {
         // Knob Cap style: machined metal dome — vertical sheen, hairline rim,
         // drop shadow onto the plate.
         lv_style_init(&knobCap);
-        lv_style_set_bg_color(&knobCap, lv_color_hex(0x4A4E54));
-        lv_style_set_bg_grad_color(&knobCap, lv_color_hex(0x33363B));
+        lv_style_set_bg_color(&knobCap, COL_KNOB_CAP_BG);
+        lv_style_set_bg_grad_color(&knobCap, COL_KNOB_CAP_GRAD);
         lv_style_set_bg_grad_dir(&knobCap, LV_GRAD_DIR_VER);
         lv_style_set_bg_opa(&knobCap, LV_OPA_COVER);
         lv_style_set_radius(&knobCap, LV_RADIUS_CIRCLE);
@@ -306,8 +306,8 @@ struct UIStyles {
         lv_style_init(&btnMain);
         lv_style_set_radius(&btnMain, scaled(3));
         lv_style_set_bg_opa(&btnMain, LV_OPA_COVER);
-        lv_style_set_bg_color(&btnMain, lv_color_hex(0x36393E));   // raised machined face
-        lv_style_set_bg_grad_color(&btnMain, lv_color_hex(0x2C2F33));
+        lv_style_set_bg_color(&btnMain, COL_CONTROL_FACE);   // raised machined face
+        lv_style_set_bg_grad_color(&btnMain, COL_BUTTON_GRAD);
         lv_style_set_bg_grad_dir(&btnMain, LV_GRAD_DIR_VER);
         lv_style_set_border_color(&btnMain, COL_BORDER);
         lv_style_set_border_width(&btnMain, 1);
@@ -356,8 +356,8 @@ struct UIStyles {
 
         // Shared compact dropdown button style for EQ header/settings controls.
         lv_style_init(&compactSelectMain);
-        lv_style_set_bg_color(&compactSelectMain, lv_color_hex(0x36393E));  // raised face
-        lv_style_set_bg_grad_color(&compactSelectMain, lv_color_hex(0x2E3135));
+        lv_style_set_bg_color(&compactSelectMain, COL_CONTROL_FACE);  // raised face
+        lv_style_set_bg_grad_color(&compactSelectMain, COL_SELECT_GRAD);
         lv_style_set_bg_grad_dir(&compactSelectMain, LV_GRAD_DIR_VER);
         lv_style_set_bg_opa(&compactSelectMain, LV_OPA_COVER);
         lv_style_set_border_width(&compactSelectMain, 1);
