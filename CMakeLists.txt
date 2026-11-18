@@ -55,6 +55,30 @@ set(LV_BUILD_DEMOS OFF CACHE BOOL "" FORCE)
 
 # Include DPF and LVGL
 add_subdirectory(deps/DPF)
+
+# The pinned LVGL submodule predates the fit-transform inverse mapping for
+# dropdown popup clicks. Rewrite the one lookup on a clean submodule so every
+# build, including source archives without a usable submodule gitdir, gets the
+# same hit testing. Existing patched checkouts are left alone.
+set(_lvgl_dropdown_src "${CMAKE_SOURCE_DIR}/deps/lvgl/src/widgets/dropdown/lv_dropdown.c")
+if(EXISTS "${_lvgl_dropdown_src}")
+    file(READ "${_lvgl_dropdown_src}" _lvgl_dropdown_text)
+    if(NOT _lvgl_dropdown_text MATCHES "Fit-transform support")
+        string(REPLACE
+            "    y -= label->coords.y1;"
+            "    /* Fit-transform support: the popup list may sit under an ancestor\n       uniform scale (the window-fit transform), so the raw indev y is in\n       window pixels while label->coords are in design pixels. Inverse-map\n       the point through the label so the clicked line index is computed in\n       the same space as the coords. At scale 1 this is a no-op. */\n    lv_point_t pt = {0, y};\n    lv_obj_transform_point(label, &pt,\n        (lv_obj_point_transform_flag_t)(LV_OBJ_POINT_TRANSFORM_FLAG_RECURSIVE |\n                                        LV_OBJ_POINT_TRANSFORM_FLAG_INVERSE));\n    y = pt.y - label->coords.y1;"
+            _lvgl_patched "${_lvgl_dropdown_text}")
+        if(_lvgl_patched STREQUAL _lvgl_dropdown_text)
+            message(FATAL_ERROR "LVGL dropdown source did not contain the expected lookup line")
+        endif()
+        file(WRITE "${_lvgl_dropdown_src}" "${_lvgl_patched}")
+        file(READ "${_lvgl_dropdown_src}" _lvgl_dropdown_text)
+        if(NOT _lvgl_dropdown_text MATCHES "Fit-transform support")
+            message(FATAL_ERROR "LVGL dropdown rewrite did not stick")
+        endif()
+    endif()
+endif()
+
 add_subdirectory(deps/lvgl)
 
 # Cymbals UI kit (knobs/controls) — PROJECT-OWNED at plugins/Cymbals/src/cymbals-ui.

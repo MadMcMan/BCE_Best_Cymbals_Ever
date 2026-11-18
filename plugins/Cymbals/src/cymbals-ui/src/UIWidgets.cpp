@@ -7,10 +7,14 @@
 static DISTRHO::UIWidgets::DiscreteSnapFn gDiscreteSnap = nullptr;
 static void* gDiscreteSnapUserData = nullptr;
 
+// Defined below; used to cancel a programmatic sweep on pointer release.
+static void arcValueAnimCb(void* var, int32_t v);
+
 namespace {
 struct ArcDragState {
     lv_point_t startPoint{0, 0};
     int startValue = 0;
+    int lastValue = -1;
     bool active = false;
 };
 
@@ -537,6 +541,7 @@ static void arcDragCb(lv_event_t* e) {
         ArcDragState& st = gArcDragStates[arc];
         st.startPoint = p;
         st.startValue = lv_arc_get_value(arc);
+        st.lastValue = st.startValue;
         // Sustained gesture: signal begin on first press (guard against duplicate PRESSED events).
         AbstractCymbalsUI* ui = static_cast<AbstractCymbalsUI*>(lv_event_get_user_data(e));
         if (ui && !st.active) {
@@ -572,6 +577,8 @@ static void arcDragCb(lv_event_t* e) {
             next = std::clamp(next, 0, 1000);
         }
 
+        it->second.lastValue = next;
+
         if (next != lv_arc_get_value(arc)) {
             lv_arc_set_value(arc, next);
             // Preserve the original user data so the callback can access UI state.
@@ -595,8 +602,12 @@ static void arcDragCb(lv_event_t* e) {
         if (!ui->isParameterContinuous((uint32_t)paramIndex)) return;
         {
             auto it = gArcDragStates.find(arc);
-            if (it != gArcDragStates.end()) it->second.active = false;
+            if (it != gArcDragStates.end() && it->second.active) {
+                ui->editParameter((uint32_t)paramIndex, false);
+                it->second.active = false;
+            }
         }
+        lv_anim_delete(arc, arcValueAnimCb);
         const float defNorm = ui->getParameterDefault((uint32_t)paramIndex);
         const int defArc = std::clamp((int)std::lround(defNorm * 1000.0f), 0, 1000);
         if (defArc != lv_arc_get_value(arc)) {
@@ -614,6 +625,22 @@ static void arcDragCb(lv_event_t* e) {
     if (code == LV_EVENT_RELEASED || code == LV_EVENT_PRESS_LOST) {
         auto it = gArcDragStates.find(arc);
         if (it != gArcDragStates.end()) {
+            const bool wasActive = it->second.active;
+            const int lastValue = it->second.lastValue;
+            if (!wasActive) {
+                lv_event_stop_bubbling(e);
+                return;
+            }
+            // A native arc write, a host echo, or a queued programmatic sweep
+            // must not move the knob after the pointer is released. Snap back
+            // to the value this gesture actually produced, before closing the
+            // gesture bracket so the correction still looks gesture-owned.
+            lv_anim_delete(arc, arcValueAnimCb);
+            if (lastValue >= 0 && lv_arc_get_value(arc) != lastValue) {
+                lv_arc_set_value(arc, lastValue);
+                void* userData = lv_event_get_user_data(e);
+                lv_obj_send_event(arc, LV_EVENT_VALUE_CHANGED, userData);
+            }
             it->second.active = false;
             // Sustained gesture: signal end to close the gesture bracket.
             AbstractCymbalsUI* ui = static_cast<AbstractCymbalsUI*>(lv_event_get_user_data(e));
@@ -626,6 +653,20 @@ static void arcDragCb(lv_event_t* e) {
     }
 }
 } // namespace (UIWidgets helpers)
+
+// Sweep the arc to its new value over 200ms. SAFE against the feedback loop
+// that a previous implementation hit: the only LV_EVENT_VALUE_CHANGED send
+// sites in lv_arc.c are inside lv_arc_event (the input path, lines ~713/747/
+// 757) - lv_arc_set_value -> value_update never fires it. So animating the
+// value cannot re-enter the parameter write and snap the knob back. User
+// gestures do NOT come through here (arcDragCb sets the value directly so the
+// pointer tracks the cursor 1:1); this is the programmatic path - preset
+// loads and host automation - where a jump reads as a glitch.
+static void arcValueAnimCb(void* var, int32_t v) {
+    lv_obj_t* arc = static_cast<lv_obj_t*>(var);
+    lv_arc_set_value(arc, v);
+    syncSharedArcVisual(arc);
+}
 
 START_NAMESPACE_DISTRHO
 
@@ -647,20 +688,6 @@ lv_obj_t* UIWidgets::findModRing(lv_obj_t* knobCont) {
         if (c && (intptr_t)lv_obj_get_user_data(c) == -2) return c;
     }
     return nullptr;
-}
-
-// Sweep the arc to its new value over 200ms. SAFE against the feedback loop
-// that a previous implementation hit: the only LV_EVENT_VALUE_CHANGED send
-// sites in lv_arc.c are inside lv_arc_event (the input path, lines ~713/747/
-// 757) - lv_arc_set_value -> value_update never fires it. So animating the
-// value cannot re-enter the parameter write and snap the knob back. User
-// gestures do NOT come through here (arcDragCb sets the value directly so the
-// pointer tracks the cursor 1:1); this is the programmatic path - preset
-// loads and host automation - where a jump reads as a glitch.
-static void arcValueAnimCb(void* var, int32_t v) {
-    lv_obj_t* arc = static_cast<lv_obj_t*>(var);
-    lv_arc_set_value(arc, v);
-    syncSharedArcVisual(arc);
 }
 
 // --- draggable scrollbar (LVGL 9 has none; see the header) ------------------

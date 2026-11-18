@@ -89,6 +89,11 @@ public:
     virtual bool modDragInProgress() const { return false; }
     // Matrix row containers, so syncParamWidget can toggle visibility on enable.
     virtual void setModRouteRow(int /*r*/, lv_obj_t* /*row*/) {}
+    // Panel-initiated route creation. The host UI owns EQ selection fan-out
+    // and can atomically refuse a group that does not fit the matrix.
+    virtual bool createModulationRoute(int /*source*/, int /*target*/, float /*amountNorm*/) {
+        return false;
+    }
     // Panel-initiated route changes (ADD ROUTE / remove / target picker). The
     // panel passes its own State so the UI can refresh the OTHER matrix surface
     // (the MOD stage vs the modal drawer) without rebuilding the changed one.
